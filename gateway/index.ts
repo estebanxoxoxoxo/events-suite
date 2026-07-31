@@ -3,13 +3,14 @@
 
 import { generalInfo } from "../sources/generalInfo";
 import { timeSession } from "../sources/timeSession";
-import type { EventEnvelope, EventName, PayloadOf, Unsubscribe } from "../types";
+import type { EventEnvelope, KnownEventName, PayloadOf, Unsubscribe } from "../types";
 
 const listeners = new Set<(event: EventEnvelope) => void>();
 const buffer: EventEnvelope[] = [];
 
 export const gateway = {
-  emit<N extends EventName>(name: N, properties?: PayloadOf<N>) {
+  /** Estricto: solo nombres del catálogo (comportamiento + negocio), con el payload exacto de cada uno. */
+  emit<N extends KnownEventName>(name: N, properties?: PayloadOf<N>) {
     const event: EventEnvelope = {
       name,
       properties: properties as EventEnvelope["properties"],

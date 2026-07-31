@@ -4,7 +4,7 @@
 import { createFSM, DONE } from "./createFSM";
 import { gateway } from "../gateway";
 import { timeSession } from "../sources/timeSession";
-import type { BounceConfig } from "../types";
+import { BehaviorEventNames, type BounceConfig } from "../types";
 
 const config: BounceConfig = {
   maxSeconds: 5,
@@ -25,7 +25,7 @@ export const startBounce = (cfg: BounceConfig = config) =>
         }
         const seconds = (Date.now() - ctx.startedAt) / 1000;
         if (seconds < cfg.maxSeconds) {
-          gateway.emit("bounce", { seconds: +seconds.toFixed(2) });
+          gateway.emit(BehaviorEventNames.Bounce, { seconds: +seconds.toFixed(2) });
         }
         return DONE;
       },

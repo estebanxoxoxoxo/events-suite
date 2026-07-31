@@ -48,11 +48,15 @@ Envelope de todo evento:
 ## Emitir eventos propios desde la app
 
 ```ts
-gateway.emit("sign_up_completed", { method: "google", attempt_id: "…" });
-gateway.emit("add_to_cart", { product_id: "sku-1", price: 990 });
+import { gateway, BusinessEventNames } from "./events-suite";
+
+gateway.emit(BusinessEventNames.SignUpCompleted, {
+  eventType: "google",
+  metadata: { attempt_id: "…" },
+});
 ```
 
-Los nombres del catálogo (`types/events.ts`) autocompletan y tipan las properties; cualquier string custom también vale.
+Los eventos de negocio llevan payload uniforme `{ eventType?, metadata? }` — lo específico va en `metadata`. Catálogo en `types/events.ts`: `BehaviorEventNames` (FSMs) y `BusinessEventNames` (app), unidos en `EventNames` / `Event`. El gateway es **estricto**: solo acepta nombres del catálogo con su payload exacto — un evento nuevo se agrega primero al catálogo.
 
 ## FSMs y configuración
 
@@ -60,9 +64,9 @@ Cada FSM vive en su archivo con su objeto `config` arriba de todo — ahí se to
 
 | Archivo | Evento | Dispara | Config inicial |
 |---|---|---|---|
-| `FSMs/relevantSession.ts` | `session_relevant` | 1×/sesión | ≥40 s **y** `reading_scroll` + `diagonal_scroll` sumando ≥5 (reglas `minEvents`, cuenta desde el gateway) |
-| `FSMs/activeSession.ts` | `session_active` | 1×/sesión | ≥15 s **y** ≥50 % depth |
-| `FSMs/scrollDepth.ts` | `scroll_depth` | 1×/nivel | niveles `[25, 50, 75, 90]` |
+| `FSMs/relevantSession.ts` | `relevant_session` | 1×/sesión | ≥40 s **y** `reading_scroll` + `diagonal_scroll` sumando ≥5 (reglas `minEvents`, cuenta desde el gateway) |
+| `FSMs/activeSession.ts` | `active_session` | 1×/sesión | ≥15 s **y** ≥50 % depth |
+| `FSMs/scrollDepth.ts` | `depth_scroll` | 1×/nivel | niveles `[25, 50, 75, 90]` |
 | `FSMs/readingScroll.ts` | `reading_scroll` | 1×/ocasión | 3 gestos < 250 px en < 30 s |
 | `FSMs/skimScroll.ts` | `skim_scroll` | 1×/ocasión | un gesto ↓ > 2500 px partiendo de depth ≤ 75 % |
 | `FSMs/diagonalScroll.ts` | `diagonal_scroll` | 1×/ocasión | 3 gestos de 500–2500 px en < 30 s |
@@ -70,7 +74,7 @@ Cada FSM vive en su archivo con su objeto `config` arriba de todo — ahí se to
 | `FSMs/bounce.ts` | `bounce` | 1×/sesión | la sesión termina antes de 5 s |
 | `FSMs/totalClicks.ts` | `total_clicks` | 1×/sesión | al cierre de sesión (pagehide) emite el total acumulado |
 | `FSMs/rageClick.ts` | `rage_click` | 1×/ocasión | ráfaga (asentada tras 200 ms) con ≥3 clicks en 600 ms |
-| `FSMs/componentFocus.ts` | `component_focus` | 1×/ocasión | llegó por scroll a un componente etiquetado, dwell de 3–20 s, y scrolleó a otra parte |
+| `FSMs/componentFocus.ts` | `component_focus` | 1×/ocasión | llegó por scroll a un componente etiquetado, dwell de 4–20 s, y scrolleó a otra parte |
 
 ### Componentes etiquetados
 

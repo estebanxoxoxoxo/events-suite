@@ -6,11 +6,11 @@
 import { createFSM, DONE } from "./createFSM";
 import { gateway } from "../gateway";
 import { timeSession } from "../sources/timeSession";
-import type { RelevantSessionConfig } from "../types";
+import { BehaviorEventNames, type RelevantSessionConfig } from "../types";
 
 const config: RelevantSessionConfig = {
   minSeconds: 40,
-  minEvents: [{ events: ["reading_scroll", "diagonal_scroll"], min: 5 }],
+  minEvents: [{ events: [BehaviorEventNames.ReadingScroll, BehaviorEventNames.DiagonalScroll], min: 5 }],
 };
 
 type Input = { seconds: number } | { event: string };
@@ -31,7 +31,7 @@ export const startRelevantSession = (cfg: RelevantSessionConfig = config) => {
           rule => rule.events.reduce((sum, name) => sum + (ctx.counts[name] ?? 0), 0) >= rule.min,
         );
         if (ctx.seconds >= cfg.minSeconds && rulesOk) {
-          gateway.emit("session_relevant", { seconds: ctx.seconds, event_counts: { ...ctx.counts } });
+          gateway.emit(BehaviorEventNames.RelevantSession, { seconds: ctx.seconds, event_counts: { ...ctx.counts } });
           return DONE;
         }
       },

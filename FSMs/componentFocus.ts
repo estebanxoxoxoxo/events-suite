@@ -8,7 +8,7 @@ import { createFSM } from "./createFSM";
 import { gateway } from "../gateway";
 import { focusedComponent } from "../sources/focusedComponent";
 import { scrollYData } from "../sources/scrollYData";
-import type { ComponentFocusConfig, ScrollDirection } from "../types";
+import { BehaviorEventNames, type ComponentFocusConfig, type ScrollDirection } from "../types";
 
 const config: ComponentFocusConfig = {
   minSeconds: 4,
@@ -47,7 +47,7 @@ export const startComponentFocus = (cfg: ComponentFocusConfig = config) =>
         const dwell = (input.at - focus.since) / 1000;
         if (dwell >= cfg.minSeconds && dwell <= cfg.maxSeconds) {
           const exitedTo = scrollYData.liveDirection();
-          gateway.emit("component_focus", {
+          gateway.emit(BehaviorEventNames.ComponentFocus, {
             component: focus.component,
             dwell_seconds: +dwell.toFixed(2),
             ...(focus.enteredFrom ? { entered_from: focus.enteredFrom } : {}),

@@ -7,7 +7,7 @@
 import { createFSM } from "./createFSM";
 import { gateway } from "../gateway";
 import { scrollYData } from "../sources/scrollYData";
-import type { ScrollGesture, SkimScrollConfig } from "../types";
+import { BehaviorEventNames, type ScrollGesture, type SkimScrollConfig } from "../types";
 
 const config: SkimScrollConfig = {
   minPx: 2500,
@@ -26,7 +26,7 @@ export const startSkimScroll = (cfg: SkimScrollConfig = config) =>
           gesture.deltaPx > cfg.minPx &&
           gesture.fromDepth <= cfg.maxFromDepth
         ) {
-          gateway.emit("skim_scroll", { delta_px: gesture.deltaPx, direction: gesture.direction });
+          gateway.emit(BehaviorEventNames.SkimScroll, { delta_px: gesture.deltaPx, direction: gesture.direction });
         }
       },
     },

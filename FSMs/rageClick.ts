@@ -5,7 +5,7 @@
 import { createFSM } from "./createFSM";
 import { gateway } from "../gateway";
 import { clicks } from "../sources/clicks";
-import type { ClickData, RageClickConfig } from "../types";
+import { BehaviorEventNames, type ClickData, type RageClickConfig } from "../types";
 
 const config: RageClickConfig = {
   count: 3,
@@ -35,7 +35,7 @@ export const startRageClick = (cfg: RageClickConfig = config) =>
           return n >= cfg.count;
         });
         if (qualifies) {
-          gateway.emit("rage_click", {
+          gateway.emit(BehaviorEventNames.RageClick, {
             clicks: burst.length,
             span_ms: burst[burst.length - 1].timestamp - burst[0].timestamp,
             x: burst[0].x,

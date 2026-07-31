@@ -4,7 +4,7 @@
 import { createFSM } from "./createFSM";
 import { gateway } from "../gateway";
 import { scrollYData } from "../sources/scrollYData";
-import type { ScrollGesture, ScrollStreakConfig } from "../types";
+import { BehaviorEventNames, type ScrollGesture, type ScrollStreakConfig } from "../types";
 
 const config: ScrollStreakConfig = {
   count: 2,
@@ -34,7 +34,7 @@ export const startDiagonalScroll = (cfg: ScrollStreakConfig = config) =>
           s => gesture.timestamp - s.at < windowMs,
         );
         if (ctx.streak.length < cfg.count) return;
-        gateway.emit("diagonal_scroll", {
+        gateway.emit(BehaviorEventNames.DiagonalScroll, {
           deltas_px: ctx.streak.map(s => s.px),
           span_seconds: (gesture.timestamp - ctx.streak[0].at) / 1000,
         });

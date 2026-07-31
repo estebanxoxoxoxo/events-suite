@@ -4,7 +4,7 @@
 import { createFSM, DONE } from "./createFSM";
 import { gateway } from "../gateway";
 import { clicks } from "../sources/clicks";
-import type { TotalClicksConfig } from "../types";
+import { BehaviorEventNames, type TotalClicksConfig } from "../types";
 
 const config: TotalClicksConfig = {
   minClicks: 0,
@@ -25,7 +25,7 @@ export const startTotalClicks = (cfg: TotalClicksConfig = config) =>
           return;
         }
         if (ctx.total >= cfg.minClicks) {
-          gateway.emit("total_clicks", { clicks: ctx.total });
+          gateway.emit(BehaviorEventNames.TotalClicks, { clicks: ctx.total });
         }
         return DONE;
       },

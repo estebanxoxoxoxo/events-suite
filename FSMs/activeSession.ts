@@ -5,7 +5,7 @@ import { createFSM, DONE } from "./createFSM";
 import { gateway } from "../gateway";
 import { scrollYData } from "../sources/scrollYData";
 import { timeSession } from "../sources/timeSession";
-import type { SessionMilestoneConfig } from "../types";
+import { BehaviorEventNames, type SessionMilestoneConfig } from "../types";
 
 const config: SessionMilestoneConfig = {
   minSeconds: 15,
@@ -25,7 +25,7 @@ export const startActiveSession = (cfg: SessionMilestoneConfig = config) =>
         if ("seconds" in input) ctx.seconds = input.seconds;
         else ctx.maxDepth = Math.max(ctx.maxDepth, input.depth);
         if (ctx.seconds >= cfg.minSeconds && ctx.maxDepth >= cfg.minScrollDepth) {
-          gateway.emit("session_active", { seconds: ctx.seconds, scroll_depth: ctx.maxDepth });
+          gateway.emit(BehaviorEventNames.ActiveSession, { seconds: ctx.seconds, scroll_depth: ctx.maxDepth });
           return DONE;
         }
       },

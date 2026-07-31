@@ -5,7 +5,7 @@
 import { createFSM } from "./createFSM";
 import { gateway } from "../gateway";
 import { scrollYData } from "../sources/scrollYData";
-import type { ScrollGesture, ToTopScrollConfig } from "../types";
+import { BehaviorEventNames, type ScrollGesture, type ToTopScrollConfig } from "../types";
 
 const config: ToTopScrollConfig = {
   minPx: 2500,
@@ -24,7 +24,7 @@ export const startToTopScroll = (cfg: ToTopScrollConfig = config) =>
           gesture.deltaPx > cfg.minPx &&
           gesture.fromDepth > cfg.minDepth
         ) {
-          gateway.emit("to_top_scroll", {
+          gateway.emit(BehaviorEventNames.ToTopScroll, {
             delta_px: gesture.deltaPx,
             from_depth: gesture.fromDepth,
             to_depth: gesture.scrollDepth,
