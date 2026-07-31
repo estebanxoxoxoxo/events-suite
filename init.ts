@@ -3,6 +3,7 @@
 import { timeSession } from "./sources/timeSession";
 import { scrollYData } from "./sources/scrollYData";
 import { clicks } from "./sources/clicks";
+import { focusedComponent } from "./sources/focusedComponent";
 import { startRelevantSession } from "./FSMs/relevantSession";
 import { startActiveSession } from "./FSMs/activeSession";
 import { startScrollDepth } from "./FSMs/scrollDepth";
@@ -13,6 +14,7 @@ import { startToTopScroll } from "./FSMs/toTopScroll";
 import { startBounce } from "./FSMs/bounce";
 import { startTotalClicks } from "./FSMs/totalClicks";
 import { startRageClick } from "./FSMs/rageClick";
+import { startComponentFocus } from "./FSMs/componentFocus";
 
 // Vite dev: los singletons de la suite (sources, gateway, máquinas) no
 // sobreviven un hot-swap parcial — mezclaría instancias viejas y nuevas.
@@ -31,6 +33,7 @@ export function initEventsSuite(): () => void {
   timeSession.start();
   scrollYData.start();
   clicks.start();
+  focusedComponent.start();
 
   const fsms = [
     startRelevantSession(),
@@ -43,10 +46,12 @@ export function initEventsSuite(): () => void {
     startBounce(),
     startTotalClicks(),
     startRageClick(),
+    startComponentFocus(),
   ];
 
   teardown = () => {
     fsms.forEach(fsm => fsm.stop());
+    focusedComponent.stop();
     clicks.stop();
     scrollYData.stop();
     timeSession.stop();

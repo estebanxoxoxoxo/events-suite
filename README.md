@@ -3,7 +3,7 @@
 Suite de analítica de comportamiento, autocontenida y sin dependencias — pensada para copiarse tal cual a cualquier proyecto React (Vite, Next, CRA moderno). Todo evento desemboca en el **gateway**; el transporte hacia ingesta / Meta / lo que sea se enchufa por fuera de esta carpeta.
 
 ```
-sources/   generalInfo · timeSession · scrollYData (debounce 250 ms) · clicks
+sources/   generalInfo · timeSession · scrollYData (debounce 250 ms) · clicks · focusedComponent
 FSMs/      7 detectores de comportamiento (config arriba de cada archivo)
 gateway/   punto único de recepción: envelope + subscribe()
 types/     tipos de sources, FSMs y catálogo de eventos
@@ -70,6 +70,23 @@ Cada FSM vive en su archivo con su objeto `config` arriba de todo — ahí se to
 | `FSMs/bounce.ts` | `bounce` | 1×/sesión | la sesión termina antes de 5 s |
 | `FSMs/totalClicks.ts` | `total_clicks` | 1×/sesión | al cierre de sesión (pagehide) emite el total acumulado |
 | `FSMs/rageClick.ts` | `rage_click` | 1×/ocasión | ráfaga (asentada tras 200 ms) con ≥3 clicks en 600 ms |
+| `FSMs/componentFocus.ts` | `component_focus` | 1×/ocasión | llegó por scroll a un componente etiquetado, dwell de 3–20 s, y scrolleó a otra parte |
+
+### Componentes etiquetados
+
+`focusedComponent` descubre los componentes por selector (config del source): por defecto `[data-analytics-id]`. Etiquetar es solo markup, sin código:
+
+```html
+<section data-analytics-id="problema">…</section>
+```
+
+La dominancia es relativa al viewport (IntersectionObserver, sin coordenadas) y el valor del atributo viaja como `component` en los eventos. No anidar etiquetas. Elementos que montan tarde entran solos (re-escaneo con MutationObserver).
+
+Payload de `component_focus`:
+
+```json
+{ "component": "problema", "dwell_seconds": 4.38, "entered_from": "down", "exited_to": "down" }
+```
 
 Un «gesto» es el neto de un scroll asentado tras 250 ms sin actividad (`sources/scrollYData.ts`): `{ deltaPx, direction, fromDepth, scrollDepth, timestamp }` — `fromDepth` es la profundidad de salida, `scrollDepth` la de llegada.
 

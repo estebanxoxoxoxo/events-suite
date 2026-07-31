@@ -14,6 +14,12 @@ export interface SuiteEventPayloads {
   bounce: { seconds: number };
   total_clicks: { clicks: number };
   rage_click: { clicks: number; span_ms: number; x: number; y: number };
+  component_focus: {
+    component: string;
+    dwell_seconds: number;
+    entered_from?: ScrollDirection;
+    exited_to?: ScrollDirection;
+  };
 }
 
 /** Típicos de producto, para emitir desde cualquier parte de la app. */

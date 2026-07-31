@@ -69,6 +69,12 @@ export interface RageClickConfig {
   debounceMs: number;
 }
 
+/** Component focus: llegó por scroll, se quedó entre min y max segundos, y scrolleó a otra parte. */
+export interface ComponentFocusConfig {
+  minSeconds: number;
+  maxSeconds: number;
+}
+
 // ── Runtime ──────────────────────────────────────────────────────────
 
 export interface FSM<Input> {

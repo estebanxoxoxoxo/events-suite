@@ -33,6 +33,23 @@ export interface ClickData {
   timestamp: number;
 }
 
+/** Config del source focusedComponent. */
+export interface FocusedComponentSourceConfig {
+  /** Qué elementos son "componentes" (p. ej. [data-analytics-id]). */
+  selectors: string[];
+  /** 0..1: fracción mínima del viewport para que un componente sea dominante. */
+  minViewportShare: number;
+}
+
+/** Cambio de componente dominante en el viewport (null = ninguno domina). */
+export interface FocusedComponent {
+  component: string | null;
+  /** 0..1: fracción del viewport que ocupa. */
+  share: number;
+  /** Epoch ms. */
+  at: number;
+}
+
 export type Unsubscribe = () => void;
 
 export interface Source<T> {
