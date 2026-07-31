@@ -6,7 +6,7 @@ import type { CSSProperties } from "react";
 import { gateway } from "./gateway";
 import type { EventEnvelope } from "./types";
 
-const MAX_EVENTS = 5;
+const MAX_EVENTS = 10;
 
 const styles = {
   box: {
