@@ -107,6 +107,8 @@ export interface EventEnvelope<N extends KnownEventName = KnownEventName> {
   name: N;
   properties: PayloadOf<N>;
   context: EventContext;
+  /** Id único del evento: clave de dedup en bronze/plata y eventID de Meta. */
+  message_id: string;
   /** ISO 8601. */
   timestamp: string;
 }

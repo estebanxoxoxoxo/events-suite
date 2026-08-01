@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from "react";
 import type { CSSProperties } from "react";
-import { gateway } from "./gateway";
+import { gateway } from "./2-gateway";
 import type { EventEnvelope } from "./types";
 
 const MAX_EVENTS = 10;

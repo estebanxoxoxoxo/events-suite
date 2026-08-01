@@ -1,0 +1,19 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// PLANTILLA del espejo local de events-suite.
+//
+// Uso:
+//   1. Copiá este archivo a tu app como src/eventsSuiteMirror.tsx
+//   2. Descomentá las líneas de abajo y ajustá el path hacia la suite
+//   3. Montá <EventsSuiteProvider reader?> en la raíz del árbol
+//   4. En cualquier componente: useEventsSuite() → { pushBusinessEvent, startDelivery }
+//
+// Regla: este espejo es EL ÚNICO archivo de la app que importa de events-suite.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// // Espejo local de events-suite — EL ÚNICO archivo de la app que importa de la
+// // suite ("una sola cosa": su index). El resto de la app importa SIEMPRE de acá:
+// // si la suite se mueve, se renombra o cambia de forma, la app solo toca este
+// // archivo. Copiar y pegar junto con la suite en cualquier proyecto.
+
+// export { EventsSuiteProvider, useEventsSuite, BusinessEventNames } from '../events-suite';
+// export type { EventsSuiteCtx, StartDeliveryConfig, BusinessEventPayload } from '../events-suite';
