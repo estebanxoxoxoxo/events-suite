@@ -23,7 +23,11 @@ const config = {
 type RudderSdk = {
   load: (writeKey: string, dataPlaneUrl: string, options?: Record<string, unknown>) => void;
   page: () => void;
-  track: (event: string, properties?: Record<string, unknown>) => void;
+  track: (
+    event: string,
+    properties?: Record<string, unknown>,
+    apiOptions?: Record<string, unknown>,
+  ) => void;
   identify: (userId: string, traits?: Record<string, unknown>) => void;
 };
 
@@ -38,7 +42,11 @@ function dispatch(envelope: EventEnvelope) {
   }
   const { event, properties } = toRudderTrack(envelope, sessionMetadata.get());
   try {
-    sdk.track(event, properties);
+    // originalTimestamp = la ocurrencia REAL (la estampó el gateway al emitir).
+    // Sin esto, lo que esperó en cola (pre-SDK, o backfill si startDelivery se
+    // gatea por consentimiento) heredaría la hora del despacho. Semántica
+    // estándar restaurada, cero columnas nuevas (ApiOptions oficial del SDK).
+    sdk.track(event, properties, { originalTimestamp: envelope.timestamp });
   } catch {
     /* el tracking nunca rompe la página */
   }

@@ -14,8 +14,10 @@ import { FbEvent } from "./utils/types";
 import { BusinessEventNames } from "../../../types";
 
 const config = {
-  /** Solo pixel hasta que /api/send-server-event exista en este repo. */
-  browserOnly: true,
+  /** false = doble pata: pixel + CAPI vía /api/send-server-event con el MISMO
+   * eventID (Meta dedupa). Requiere META_PIXEL_ID y META_ACCESS_TOKEN en el
+   * server; si faltan, la CAPI responde 500 y solo cuenta el pixel (sin dobles). */
+  browserOnly: false,
   mapping: {
     [BusinessEventNames.SignUpCompleted]: FbEvent.CompleteRegistration,
     [BusinessEventNames.AddToCart]: FbEvent.AddToCart,

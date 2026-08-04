@@ -4,7 +4,7 @@ Sistema de analítica de **comportamiento** y de **negocio** para el navegador. 
 
 1. **Detectar** — sources que observan la sesión (scroll, clicks, viewport, tiempo, componentes visibles) y 11 FSMs que convierten esos datos crudos en eventos con significado (`reading_scroll`, `rage_click`, `component_focus`, `bounce`…).
 2. **Nuclear** — un gateway único que envuelve TODO evento (de las FSMs o de la app) en un envelope con contexto, `message_id` y timestamp.
-3. **Despachar** — delivery completa el payload (metadata de sesión: geo/IP de Vercel, login, cookies de Meta) y lo transporta a los destinos: el pipeline propio (protocolo RudderStack → Vector → S3 raw/bronze) y las conversiones de Meta (pixel + CAPI).
+3. **Despachar** — delivery completa el payload (metadata de sesión: geo/IP del hosting, login, cookies de Meta) y lo transporta a los destinos: el pipeline propio (protocolo RudderStack → Vector → S3 raw/bronze) y las conversiones de Meta (pixel + CAPI).
 
 Se copia como carpeta a cualquier proyecto. El core es framework-free; el binding oficial es React (`EventsSuiteProvider`).
 
@@ -40,7 +40,7 @@ const suite = useEventsSuite();
 useEffect(() => {
   suite.startDelivery({
     rudderStackWriteKey: ANALYTICS_WRITE_KEY, // → pipeline propio (Vector → S3)
-    fb: true,                                 // → conversiones de Meta (pixel)
+    fb: true,                                 // → conversiones de Meta (pixel + CAPI, mismo eventID)
     vercelMetadataCollect: true,              // → geo/IP de sesión
   });
 }, [suite]);
@@ -72,7 +72,7 @@ Los módulos que no son componentes (auth, helpers) **no emiten**: el emit se su
 
 El host además tiene que servir los endpoints de «Requisitos del host».
 
-**Contrato público completo** (nada más sale del index): `EventsSuiteProvider`, `useEventsSuite`, `BusinessEventNames` + tipos `StartDeliveryConfig`, `BusinessEventPayload`, `EventsSuiteCtx`.
+**Contrato público completo** (nada más sale del index): `EventsSuiteProvider`, `useEventsSuite`, `BusinessEventNames`, `pushEvent`, `FbEvent` + tipos `StartDeliveryConfig`, `BusinessEventPayload`, `EventsSuiteCtx`. (`pushEvent`/`FbEvent` son las conversiones DIRECTAS de Meta — PageView/ViewContent/Lead — que corren fuera del gateway; la suite es el único motor Meta desde que se retiró `facebook-api-template`.)
 
 ## La dinámica — el viaje de un evento
 
@@ -92,6 +92,7 @@ Propiedades de esa dinámica, todas deliberadas:
 - **Nada se pierde por orden de arranque.** El gateway bufferea y el canal de delivery también: un pusher que arranca tarde recibe el historial completo de la sesión (backfill) sin pedirle nada a nadie.
 - **El enriquecimiento ocurre AL DESPACHAR**, no al emitir: la identidad o la geo que llegan al minuto 3 alcanzan igual a los eventos que siguen en cola.
 - **`message_id` es el mismo id en los tres sistemas**: dedup de la capa plata en bronze, `eventID` del pixel y de la CAPI de Meta. Un solo identificador correlaciona todo.
+- **`original_timestamp` es la ocurrencia REAL**: el pusher lo pasa por evento al SDK (`ApiOptions.originalTimestamp` = el timestamp del envelope), así que lo que esperó en cola (pre-SDK o backfill gateado por consentimiento) no hereda la hora del despacho. Semántica estándar, cero columnas extra.
 - **El gateway es estricto en compilación**: solo nombres del catálogo con su payload exacto; y desde la app, `pushBusinessEvent` solo acepta eventos de negocio.
 - **Eventos de cierre** (`bounce`, `total_clicks`) se emiten en `pagehide`. Caveat conocido: el SDK de RudderStack flushea cada 3 s sin beacon, así que si la pestaña se cierra justo, quedan persistidos en localStorage y salen en la próxima visita (no se pierden, llegan tarde).
 - **En dev (Vite), editar la suite fuerza recarga completa**: los singletons no sobreviven un hot-swap parcial sin mezclar instancias viejas y nuevas.
@@ -107,7 +108,7 @@ Propiedades de esa dinámica, todas deliberadas:
 3-delivery/    etapa 3: completar el payload y sacarlo al mundo
   channel.ts     entrada de eventos de la fase: deliver() + registro de dispatchers
   adapters/      dominio de completar payloads:
-    metadata/      sessionMetadata: vercel (geo/IP de sesión) · login · fb
+    metadata/      sessionMetadata: hosting (geo/IP de sesión, supplier) · login · fb
     rudderstack/fb funciones PURAS: envelope + metadata → payload del destino
   pushers/       rudderstack (SDK: cola/batch/retry) · fb/ (pixel + CAPI)
   stageGateway   ÚNICO punto de entrada a la fase: deliver() + controles públicos
@@ -171,9 +172,9 @@ Dominancia relativa al viewport (IntersectionObserver, sin coordenadas); el valo
 
 ## Delivery: metadata, adapters y pushers
 
-**`adapters/metadata/`** — registry `sessionMetadata` con tres orígenes: `vercel` (país, IP, ciudad, timezone de la SESIÓN: headers `x-vercel-ip-*` del edge servidos por `/api/session-metadata`), `login` (la app la empuja con `setLoginMetadata()` post-auth — pendiente de cablear), `fb` (cookies `_fbp`/`_fbc` auto + `setFbMetadata()`). Suscribible: el pusher de rudder dispara `identify()` solo cuando cae el login.
+**`adapters/metadata/`** — registry `sessionMetadata` con tres orígenes: `metaDataFromHosting` (lo que el HOSTING sabe de la sesión — `supplier` que identifica al proveedor + país, IP, ciudad, timezone: headers del edge servidos por `/api/get-vercel-session-metadata`; sin data de deployment a propósito), `login` (la app la empuja con `setLoginMetadata()` post-auth — pendiente de cablear), `fb` (cookies `_fbp`/`_fbc` auto + `setFbMetadata()`). Suscribible: el pusher de rudder dispara `identify()` solo cuando cae el login.
 
-**`adapters/`** — funciones puras, sin IO: `toRudderTrack` (negocio aplanado a properties chatas + `message_id` + bloque `suite` con sesión/vercel) y `toFbPush` (conversión con `eventId = message_id`).
+**`adapters/`** — funciones puras, sin IO: `toRudderTrack` (negocio aplanado a properties chatas + `message_id` + bloque `suite` con `session_time_sec`/`loaded_at`/`metaDataFromHosting`) y `toFbPush` (conversión con `eventId = message_id`).
 
 **`pushers/`** — `rudderstack.ts` (el viejo `src/analytics.js`: SDK en idle con timeout, cola pre-SDK, `page()` manual, batch, sin beacon; recibe TODO el gateway) y `fb/` (copia completa de `facebook-push-events` + mapping SOLO de eventos de negocio a conversiones estándar — **Lead excluido a propósito**: ya lo dispara `startRegisterAttempt` con `eventId = attemptId`; duplicarlo contaría conversiones dobles).
 
@@ -181,8 +182,8 @@ Dominancia relativa al viewport (IntersectionObserver, sin coordenadas); el valo
 
 - **React ≥ 18** (solo para el binding: Provider/hook/reader; el core no lo usa).
 - **RudderStack**: dependencia `@rudderstack/analytics-js` (import dinámico: solo carga si `startDelivery` la activa) + dataplane same-origin: `/sourceConfig` y `/v1/batch` servidos por el dominio (dev/preview: middleware y proxy en `vite.config.js`; prod: rewrites de `vercel.json`) + el `writeKey` que la app pasa en `startDelivery`.
-- **Meta**: snippet del pixel (`fbq`) en el HTML; la CAPI necesita `/api/send-server-event` (mientras no exista, el pusher va `browserOnly`).
-- **Metadata de Vercel**: la función `api/session-metadata.js` (echo de los headers del edge; en dev la mockea `vite.config.js`).
+- **Meta**: snippet del pixel (`fbq`) en el HTML + la función `api/send-server-event.ts` (CAPI) con `META_PIXEL_ID` y `META_ACCESS_TOKEN` en las env del server — sin ellas la CAPI responde 500 y solo cuenta el pixel (degradación segura, sin dobles). `META_TEST_EVENT_CODE` solo para probar en Events Manager: vacío en producción. En dev, `vite.config.js` mockea el endpoint.
+- **Metadata del hosting**: la función `api/get-vercel-session-metadata.js` (echo de los headers del edge con `supplier: "vercel"`; en dev la mockea `vite.config.js`). En otro hosting, se reimplementa el endpoint con su `supplier` y la suite no cambia.
 
 ## Recetas
 

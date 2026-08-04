@@ -5,7 +5,7 @@
 
 export { deliver } from "./channel";
 
-export { sessionMetadata, collectVercelMetadata, setLoginMetadata, setFbMetadata } from "./adapters/metadata";
+export { sessionMetadata, collectHostingMetadata, setLoginMetadata, setFbMetadata } from "./adapters/metadata";
 
 export { toRudderTrack } from "./adapters/rudderstack";
 export type { RudderTrackCall } from "./adapters/rudderstack";
@@ -13,9 +13,9 @@ export { toFbPush } from "./adapters/fb";
 export type { FbEventMapping, FbPushCall } from "./adapters/fb";
 
 export { startRudderstackPusher } from "./pushers/rudderstack";
-export { startFbPusher, setServerEndpoint, onFbEvent, FbEvent } from "./pushers/fb";
+export { startFbPusher, pushEvent, setServerEndpoint, onFbEvent, FbEvent } from "./pushers/fb";
 
-import { collectVercelMetadata } from "./adapters/metadata";
+import { collectHostingMetadata } from "./adapters/metadata";
 import { startRudderstackPusher } from "./pushers/rudderstack";
 import { startFbPusher } from "./pushers/fb";
 
@@ -31,5 +31,5 @@ export interface StartDeliveryConfig {
 export function startDelivery(config: StartDeliveryConfig): void {
   if (config.rudderStackWriteKey) startRudderstackPusher({ writeKey: config.rudderStackWriteKey });
   if (config.fb) startFbPusher();
-  if (config.vercelMetadataCollect) collectVercelMetadata();
+  if (config.vercelMetadataCollect) collectHostingMetadata();
 }

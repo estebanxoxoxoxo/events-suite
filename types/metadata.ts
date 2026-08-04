@@ -1,8 +1,9 @@
 // Tipos de la metadata de sesión (registry en metadata/).
 
-/** Lo que Vercel sabe de la SESIÓN (headers x-vercel-ip-* del edge, servidos
- * por /api/session-metadata) + datos del deploy que ese endpoint adjunta. */
-export interface VercelMetadata {
+/** Metadata de sesión que aporta el HOSTING (headers del edge servidos por
+ * /api/get-vercel-session-metadata). `supplier` identifica al proveedor (acá: "vercel"). */
+export interface HostingMetadata {
+  supplier?: string;
   ip?: string;
   country?: string;
   region?: string;
@@ -11,12 +12,6 @@ export interface VercelMetadata {
   latitude?: string;
   longitude?: string;
   timezone?: string;
-  deployment?: {
-    env?: string;
-    url?: string;
-    commit?: string;
-    branch?: string;
-  };
 }
 
 /** La empuja la app post-auth vía setLoginMetadata(). */
@@ -36,7 +31,7 @@ export interface FbMetadata {
 }
 
 export interface SessionMetadata {
-  vercel: VercelMetadata;
+  metaDataFromHosting: HostingMetadata;
   login: LoginMetadata;
   fb: FbMetadata;
 }

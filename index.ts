@@ -9,3 +9,6 @@ export type { EventsSuiteCtx } from "./EventsSuiteProvider";
 export { BusinessEventNames } from "./types/events";
 export type { BusinessEventPayload } from "./types/events";
 export type { StartDeliveryConfig } from "./3-delivery/stageGateway";
+// Conversiones directas de Meta (fuera del gateway): el motor pixel+CAPI vive
+// en la suite desde que se retiró facebook-api-template.
+export { pushEvent, FbEvent } from "./3-delivery/stageGateway";

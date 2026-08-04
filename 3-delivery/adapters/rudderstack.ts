@@ -27,8 +27,10 @@ export function toRudderTrack(envelope: EventEnvelope, metadata: SessionMetadata
     flat = { ...(raw ?? {}) };
   }
 
-  const { vercel } = metadata;
-  const hasVercel = Boolean(vercel.country || vercel.ip || vercel.timezone || vercel.deployment);
+  const { metaDataFromHosting } = metadata;
+  const hasHosting = Boolean(
+    metaDataFromHosting.supplier || metaDataFromHosting.country || metaDataFromHosting.ip,
+  );
 
   return {
     event: envelope.name,
@@ -38,7 +40,7 @@ export function toRudderTrack(envelope: EventEnvelope, metadata: SessionMetadata
       suite: {
         session_time_sec: envelope.context.session_time_sec,
         loaded_at: envelope.context.loaded_at,
-        ...(hasVercel ? { vercel } : {}),
+        ...(hasHosting ? { metaDataFromHosting } : {}),
       },
     },
   };
