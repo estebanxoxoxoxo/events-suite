@@ -1,5 +1,7 @@
 // FSM «Bounce» — 1 vez por sesión: la sesión terminó (pagehide) antes del
 // umbral mínimo de interacción. Pasado el umbral, la máquina se retira sola.
+// El umbral se mide en segundos de ATENCIÓN, no de reloj: el que abre la
+// landing, se va a otra pestaña diez minutos y cierra sin leer, rebotó.
 
 import { createFSM, DONE } from "./createFSM";
 import { gateway } from "../../2-gateway";
@@ -11,22 +13,23 @@ const config: BounceConfig = {
 };
 
 type Input = { seconds: number } | { sessionEnd: true };
-type Ctx = { startedAt: number };
+type Ctx = Record<string, never>;
 
 export const startBounce = (cfg: BounceConfig = config) =>
   createFSM<Input, Ctx>({
     id: "bounce",
     initial: "watching",
-    context: { startedAt: Date.now() },
+    context: {},
     states: {
-      watching(input, ctx) {
+      watching(input) {
         if ("seconds" in input) {
           return input.seconds >= cfg.maxSeconds ? DONE : undefined;
         }
-        const seconds = (Date.now() - ctx.startedAt) / 1000;
+        // al momento, no del último tick: el source lo calcula por resta
+        const seconds = timeSession.getSeconds();
         if (seconds < cfg.maxSeconds) {
           gateway.emit(BehaviorEventNames.Bounce, {
-            values: [{ name: "seconds", value: +seconds.toFixed(2) }],
+            values: [{ name: "engaged_seconds", value: seconds }],
           });
         }
         return DONE;

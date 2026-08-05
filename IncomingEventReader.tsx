@@ -53,7 +53,7 @@ export function IncomingEventReader({ style }: { style?: CSSProperties }) {
       ) : (
         events.map((event, i) => (
           <div style={styles.row} key={`${event.timestamp}-${event.name}-${i}`}>
-            <span style={styles.time}>{event.context.session_time_sec}s</span>{" "}
+            <span style={styles.time}>{event.context.engaged_time_sec}s</span>{" "}
             <b>{event.name}</b>{" "}
             <span style={styles.props}>
               {event.properties ? JSON.stringify(event.properties) : ""}

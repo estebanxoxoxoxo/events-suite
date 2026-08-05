@@ -9,8 +9,11 @@ import type { EventEnvelope, KnownEventName, PayloadOf, Unsubscribe } from "../t
 const listeners = new Set<(event: EventEnvelope) => void>();
 const buffer: EventEnvelope[] = [];
 
-// Id único por evento: dedup en bronze/plata y eventID de Meta (pixel + CAPI).
-const newMessageId = () =>
+// Id único de la OCURRENCIA: dedup en bronze/plata y eventID de Meta (pixel +
+// CAPI). Ojo, no confundir con el `messageId` que genera el SDK de RudderStack
+// al despachar: ese es del mensaje y cambia si el evento esperó en cola; este
+// es del momento en que pasó y es el que correlaciona los tres sistemas.
+const newEventId = () =>
   typeof crypto !== "undefined" && crypto.randomUUID
     ? crypto.randomUUID()
     : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -21,8 +24,8 @@ export const gateway = {
     const event: EventEnvelope = {
       name,
       properties: properties as EventEnvelope["properties"],
-      context: { ...generalInfo.get(), session_time_sec: timeSession.getSeconds() },
-      message_id: newMessageId(),
+      context: { ...generalInfo.get(), engaged_time_sec: timeSession.getSeconds() },
+      event_id: newEventId(),
       timestamp: new Date().toISOString(),
     };
     buffer.push(event);

@@ -41,13 +41,11 @@ function dispatch(envelope: EventEnvelope) {
     pending.push(envelope);
     return;
   }
-  const { event, properties } = toRudderTrack(envelope, sessionMetadata.get());
+  const { event, properties, options } = toRudderTrack(envelope, sessionMetadata.get());
   try {
-    // originalTimestamp = la ocurrencia REAL (la estampó el gateway al emitir).
-    // Sin esto, lo que esperó en cola (pre-SDK, o backfill si startDelivery se
-    // gatea por consentimiento) heredaría la hora del despacho. Semántica
-    // estándar restaurada, cero columnas nuevas (ApiOptions oficial del SDK).
-    sdk.track(event, properties, { originalTimestamp: envelope.timestamp });
+    // Las options las arma el adapter: `originalTimestamp` (la ocurrencia real,
+    // no la hora del despacho) y el entorno que el SDK mergea en `context`.
+    sdk.track(event, properties, options);
   } catch {
     /* el tracking nunca rompe la página */
   }

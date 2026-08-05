@@ -1,8 +1,8 @@
-// FSM «Scroll despectivo» — 1 vez por ocasión: un solo gesto muy largo HACIA
-// ABAJO, compatible con un recorrido superficial del contenido. Subir nunca es
-// despectivo: las vueltas al tope (aun partidas en varios gestos por el
-// momentum) son territorio de toTopScroll. Además, si el gesto parte de una
-// profundidad mayor a maxFromDepth no dispara (espejo del minDepth de toTop).
+// FSM «Scroll despectivo» — 1 vez por ocasión: un solo gesto muy largo,
+// compatible con un recorrido superficial del contenido. Hacia abajo dispara
+// siempre; hacia arriba también, MENOS la barrida completa al tope, que es
+// territorio de toTopScroll. Definido por complemento a propósito: entre los
+// dos eventos no queda gesto largo sin clasificar ni gesto contado dos veces.
 
 import { createFSM } from "./createFSM";
 import { gateway } from "../../2-gateway";
@@ -11,7 +11,9 @@ import { BehaviorEventNames, type ScrollGesture, type SkimScrollConfig } from ".
 
 const config: SkimScrollConfig = {
   minPx: 2500,
-  maxFromDepth: 0.75,
+  // lo que le cede a toTopScroll: mismos números que su config
+  fullSweepFromDepth: 0.8,
+  fullSweepToDepth: 0.2,
 };
 
 export const startSkimScroll = (cfg: SkimScrollConfig = config) =>
@@ -21,11 +23,11 @@ export const startSkimScroll = (cfg: SkimScrollConfig = config) =>
     context: {},
     states: {
       watching(gesture) {
-        if (
-          gesture.direction === "down" &&
-          gesture.deltaPx > cfg.minPx &&
-          gesture.fromDepth <= cfg.maxFromDepth
-        ) {
+        const fullSweep =
+          gesture.direction === "up" &&
+          gesture.fromDepth > cfg.fullSweepFromDepth &&
+          gesture.scrollDepth < cfg.fullSweepToDepth;
+        if (gesture.deltaPx > cfg.minPx && !fullSweep) {
           gateway.emit(BehaviorEventNames.SkimScroll, {
             direction: gesture.direction, // dimensión: queda fuera de values
             values: [{ name: "delta_px", value: gesture.deltaPx }],

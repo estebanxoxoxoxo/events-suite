@@ -1,6 +1,8 @@
-// FSM «Vuelta al tope» — 1 vez por ocasión: el usuario estaba profundo en la
-// página (fromDepth > minDepth) y pegó un gesto largo hacia arriba. La
-// profundidad de salida viene en el propio gesto (source scrollYData).
+// FSM «Vuelta al tope» — 1 vez por ocasión: barrida completa al tope en UN
+// gesto: sale de profundo (> minFromDepth) y aterriza arriba (< maxToDepth).
+// Sin umbral de píxeles: el recorrido ya implica un gesto largo, y en
+// proporción de página significa lo mismo en mobile que en desktop. Las dos
+// profundidades vienen en el propio gesto (source scrollYData).
 
 import { createFSM } from "./createFSM";
 import { gateway } from "../../2-gateway";
@@ -8,8 +10,8 @@ import { scrollYData } from "../sources/scrollYData";
 import { BehaviorEventNames, type ScrollGesture, type ToTopScrollConfig } from "../../types";
 
 const config: ToTopScrollConfig = {
-  minPx: 2500,
-  minDepth: 0.75,
+  minFromDepth: 0.8,
+  maxToDepth: 0.2,
 };
 
 export const startToTopScroll = (cfg: ToTopScrollConfig = config) =>
@@ -21,8 +23,8 @@ export const startToTopScroll = (cfg: ToTopScrollConfig = config) =>
       watching(gesture) {
         if (
           gesture.direction === "up" &&
-          gesture.deltaPx > cfg.minPx &&
-          gesture.fromDepth > cfg.minDepth
+          gesture.fromDepth > cfg.minFromDepth &&
+          gesture.scrollDepth < cfg.maxToDepth
         ) {
           gateway.emit(BehaviorEventNames.ToTopScroll, {
             values: [

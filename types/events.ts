@@ -43,7 +43,7 @@ export interface BehaviorEvents {
     values: EventValue<"delta_px" | "from_depth" | "to_depth">[];
   };
   [BehaviorEventNames.DiagonalScroll]: { values: EventValue<ScrollStreakValue>[] };
-  [BehaviorEventNames.Bounce]: { values: EventValue<"seconds">[] };
+  [BehaviorEventNames.Bounce]: { values: EventValue<"engaged_seconds">[] };
   [BehaviorEventNames.TotalClicks]: { values: EventValue<"clicks">[] };
   [BehaviorEventNames.RageClick]: {
     values: EventValue<"clicks" | "span_ms" | "x" | "y">[];
@@ -122,15 +122,18 @@ export type PayloadOf<N extends KnownEventName> = Event[N];
 
 /** Contexto que el gateway adjunta a todo evento. */
 export interface EventContext extends GeneralInfo {
-  session_time_sec: number;
+  /** Segundos de ATENCIÓN (pestaña visible), no de reloj: el de reloj sale de
+   * `timestamp - loaded_at`. Ver el source timeSession. */
+  engaged_time_sec: number;
 }
 
 export interface EventEnvelope<N extends KnownEventName = KnownEventName> {
   name: N;
   properties: PayloadOf<N>;
   context: EventContext;
-  /** Id único del evento: clave de dedup en bronze/plata y eventID de Meta. */
-  message_id: string;
+  /** Id único de la ocurrencia: clave de dedup en bronze/plata y eventID de
+   * Meta. Distinto del `messageId` del SDK, que identifica el despacho. */
+  event_id: string;
   /** ISO 8601. */
   timestamp: string;
 }

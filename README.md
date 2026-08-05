@@ -3,7 +3,7 @@
 Sistema de analítica de **comportamiento** y de **negocio** para el navegador. Se ocupa de tres cosas, en cadena y con una sola vía:
 
 1. **Detectar** — sources que observan la sesión (scroll, clicks, viewport, tiempo, componentes visibles) y 11 FSMs que convierten esos datos crudos en eventos con significado (`reading_scroll`, `rage_click`, `component_focus`, `bounce`…).
-2. **Nuclear** — un gateway único que envuelve TODO evento (de las FSMs o de la app) en un envelope con contexto, `message_id` y timestamp.
+2. **Nuclear** — un gateway único que envuelve TODO evento (de las FSMs o de la app) en un envelope con contexto, `event_id` y timestamp.
 3. **Despachar** — delivery completa el payload (metadata de sesión: geo/IP del hosting, login, cookies de Meta) y lo transporta a los destinos: el pipeline propio (protocolo RudderStack → Vector → S3 raw/bronze) y las conversiones de Meta (pixel + CAPI).
 
 Se copia como carpeta a cualquier proyecto. El core es framework-free; el binding oficial es React (`EventsSuiteProvider`).
@@ -80,7 +80,7 @@ El host además tiene que servir los endpoints de «Requisitos del host».
 usuario scrollea
   → source (scrollYData: gesto asentado tras 250 ms, con fromDepth/scrollDepth)
   → FSM (p. ej. readingScroll: racha de 3 gestos cortos → patrón detectado)
-  → gateway.emit() (interno) → envelope { properties + context + message_id + timestamp }
+  → gateway.emit() (interno) → envelope { properties + context + event_id + timestamp }
   → deliver() — el gateway EMPUJA al stageGateway de delivery (una sola vía)
   → channel: bufferea y reparte a los pushers registrados
   → pusher: adapter(envelope, sessionMetadata.get()) → payload del destino → red
@@ -91,7 +91,7 @@ Propiedades de esa dinámica, todas deliberadas:
 - **Presencia = medición; config = transmisión.** El auto-init (al importar) enciende SOLO detección. Nada sale a la red hasta que la app llama `startDelivery`, y sale exactamente lo que su config habilita (`rudderStackWriteKey` → pipeline, `fb` → Meta, `vercelMetadataCollect` → fetch de geo).
 - **Nada se pierde por orden de arranque.** El gateway bufferea y el canal de delivery también: un pusher que arranca tarde recibe el historial completo de la sesión (backfill) sin pedirle nada a nadie.
 - **El enriquecimiento ocurre AL DESPACHAR**, no al emitir: la identidad o la geo que llegan al minuto 3 alcanzan igual a los eventos que siguen en cola.
-- **`message_id` es el mismo id en los tres sistemas**: dedup de la capa plata en bronze, `eventID` del pixel y de la CAPI de Meta. Un solo identificador correlaciona todo.
+- **`event_id` es el mismo id en los tres sistemas**: dedup de la capa plata en bronze, `eventID` del pixel y de la CAPI de Meta. Un solo identificador correlaciona todo. **No confundirlo con el `message_id` de la raíz del evento en bronze**: ese lo genera el SDK de RudderStack al despachar e identifica el *mensaje*, así que cambia si el evento esperó en cola. `event_id` identifica la *ocurrencia* y se estampa cuando pasó.
 - **`original_timestamp` es la ocurrencia REAL**: el pusher lo pasa por evento al SDK (`ApiOptions.originalTimestamp` = el timestamp del envelope), así que lo que esperó en cola (pre-SDK o backfill gateado por consentimiento) no hereda la hora del despacho. Semántica estándar, cero columnas extra.
 - **El gateway es estricto en compilación**: solo nombres del catálogo con su payload exacto; y desde la app, `pushBusinessEvent` solo acepta eventos de negocio.
 - **Eventos de cierre** (`bounce`, `total_clicks`) se emiten en `pagehide`. Caveat conocido: el SDK de RudderStack flushea cada 3 s sin beacon, así que si la pestaña se cierra justo, quedan persistidos en localStorage y salen en la próxima visita (no se pierden, llegan tarde).
@@ -129,10 +129,14 @@ EventsSuiteProvider.tsx · init.ts (auto-init) · IncomingEventReader.tsx · ind
 Todo evento viaja con el sobre que arma el gateway (interno):
 
 ```ts
-{ name, properties, context: { page, resolution, loaded_at, session_time_sec }, message_id, timestamp }
+{ name, properties, context: { page, resolution, loaded_at, engaged_time_sec }, event_id, timestamp }
 ```
 
-`loaded_at` es constante por sesión (agrupador natural en bronze); `session_time_sec` es el reloj relativo; `message_id` es la clave de dedup transversal.
+`loaded_at` es constante por carga de página (agrupador natural en bronze, y el ancla para calcular `timestamp - loaded_at`); `event_id` es la clave de dedup transversal.
+
+**`engaged_time_sec` es tiempo de ATENCIÓN, no de reloj**: solo corre con la pestaña visible (Page Visibility API), que es lo que GA4 llama *engagement time*. El tiempo de reloj no se guarda porque ya lo tenés gratis: `timestamp - loaded_at`. Y el valor sale de restar instantes sobre los tramos visibles, no de contar ticks, así que es exacto aunque el navegador atrase el timer — que es justo lo que hace en pestañas de fondo.
+
+Ojo con la consecuencia: los umbrales de `bounce`, `active_session` y `relevant_session` se miden en esos segundos. «40 segundos» significa 40 segundos **mirando**, y el que abre la landing, se va a otra pestaña diez minutos y cierra sin leer, rebota.
 
 Los eventos de **negocio** llevan payload uniforme `{ eventType?, metadata? }` — lo específico va en `metadata`. Catálogo en `types/events.ts`: `BehaviorEventNames` (emiten las FSMs) y `BusinessEventNames` (lo único emitible desde la app).
 
@@ -142,19 +146,21 @@ Cada FSM vive en su archivo con su objeto `config` arriba de todo — **la fuent
 
 | Archivo | Evento | Dispara | Config actual |
 |---|---|---|---|
-| `relevantSession.ts` | `relevant_session` | 1×/sesión | ≥40 s **y** `reading_scroll` + `diagonal_scroll` sumando ≥5 (reglas `minEvents`, cuenta desde el gateway) |
-| `activeSession.ts` | `active_session` | 1×/sesión | ≥15 s **y** ≥50 % depth |
+| `relevantSession.ts` | `relevant_session` | 1×/sesión | ≥40 s de atención **y** `reading_scroll` + `diagonal_scroll` sumando ≥5 (reglas `minEvents`, cuenta desde el gateway) |
+| `activeSession.ts` | `active_session` | 1×/sesión | ≥15 s de atención **y** ≥50 % depth |
 | `scrollDepth.ts` | `depth_scroll` | 1×/nivel | niveles `[25, 50, 75, 90]` |
 | `readingScroll.ts` | `reading_scroll` | 1×/ocasión | 3 gestos < 301 px en < 20 s |
-| `skimScroll.ts` | `skim_scroll` | 1×/ocasión | un gesto ↓ > 2500 px partiendo de depth ≤ 75 % |
+| `skimScroll.ts` | `skim_scroll` | 1×/ocasión | un gesto > 2500 px en cualquier dirección, salvo la barrida completa al tope |
 | `diagonalScroll.ts` | `diagonal_scroll` | 1×/ocasión | 2 gestos de 300–2501 px en < 20 s |
-| `toTopScroll.ts` | `to_top_scroll` | 1×/ocasión | gesto ↑ > 2500 px partiendo de depth > 75 % |
-| `bounce.ts` | `bounce` | 1×/sesión | la sesión termina (pagehide) antes de 5 s |
+| `toTopScroll.ts` | `to_top_scroll` | 1×/ocasión | un gesto ↑ que sale de depth > 80 % y aterriza en < 20 % (sin umbral de px) |
+| `bounce.ts` | `bounce` | 1×/sesión | la sesión termina (pagehide) antes de 5 s **de atención** |
 | `totalClicks.ts` | `total_clicks` | 1×/sesión | al cierre de sesión emite el total acumulado |
 | `rageClick.ts` | `rage_click` | 1×/ocasión | ráfaga (asentada tras 200 ms) con ≥3 clicks en 600 ms |
 | `componentFocus.ts` | `component_focus` | 1×/ocasión | llegó por scroll a un componente etiquetado, dwell de 4–20 s, y scrolleó a otra parte |
 
-Un «gesto» es el neto de un scroll asentado tras 250 ms sin actividad: `{ deltaPx, direction, fromDepth, scrollDepth, timestamp }` — `fromDepth` es la profundidad de salida, `scrollDepth` la de llegada.
+Un «gesto» es el neto de un scroll asentado tras 250 ms sin actividad: `{ deltaPx, direction, fromDepth, scrollDepth, timestamp }` — `fromDepth` es la profundidad de salida, `scrollDepth` la de llegada. La profundidad incluye el viewport (`(scrollY + alto de ventana) / alto del documento`): es cuánto de la página se vio, no dónde arranca la ventana.
+
+**`skim_scroll` y `to_top_scroll` se reparten los gestos largos por complemento.** `to_top_scroll` se queda con la barrida completa al tope (sale de > 0.8, aterriza en < 0.2, en un solo gesto) y `skim_scroll` con todo el resto que supere `minPx`, en las dos direcciones. Así ningún gesto largo queda sin clasificar ni se cuenta dos veces — antes, una subida larga que no venía del fondo no la tomaba nadie. Los dos umbrales están escritos en los dos configs (ninguna FSM importa de la otra): si tocás uno, tocá el otro. `to_top_scroll` no usa píxeles a propósito: definido por proporción de página, significa lo mismo en mobile que en desktop.
 
 ### Componentes etiquetados
 
@@ -195,7 +201,7 @@ Tres reglas:
 | `reading_scroll` · `diagonal_scroll` | `gestures`, `total_px`, `span_seconds` | — |
 | `skim_scroll` | `delta_px` | `direction` |
 | `to_top_scroll` | `delta_px`, `from_depth`, `to_depth` | — |
-| `bounce` | `seconds` | — |
+| `bounce` | `engaged_seconds` | — |
 | `total_clicks` | `clicks` | — |
 | `rage_click` | `clicks`, `span_ms`, `x`, `y` | — |
 | `component_focus` | `dwell_seconds` | `component`, `entered_from`, `exited_to` |
@@ -206,9 +212,39 @@ Los eventos de negocio no usan `values`: siguen con `eventType` + `metadata`, qu
 
 **`adapters/metadata/`** — registry `sessionMetadata` con tres orígenes: `metaDataFromHosting` (lo que el HOSTING sabe de la sesión — `supplier` que identifica al proveedor + país, IP, ciudad, timezone: headers del edge servidos por `/api/get-vercel-session-metadata`; sin data de deployment a propósito), `login` (la app la empuja con `setLoginMetadata()` post-auth — pendiente de cablear), `fb` (cookies `_fbp`/`_fbc` auto + `setFbMetadata()`). Suscribible: el pusher de rudder dispara `identify()` solo cuando cae el login.
 
-**`adapters/`** — funciones puras, sin IO: `toRudderTrack` (negocio aplanado a properties chatas + `message_id` + bloque `suite` con `session_time_sec`/`loaded_at`/`metaDataFromHosting`) y `toFbPush` (conversión con `eventId = message_id`).
+**`adapters/`** — funciones puras, sin IO: `toRudderTrack` y `toFbPush` (conversión con `eventId = event_id`).
 
-**`pushers/`** — `rudderstack.ts` (el viejo `src/analytics.js`: SDK en idle con timeout, cola pre-SDK, `page()` manual, batch, sin beacon; recibe TODO el gateway) y `fb/` (copia completa de `facebook-push-events` + mapping SOLO de eventos de negocio a conversiones estándar — **Lead excluido a propósito**: ya lo dispara `startRegisterAttempt` con `eventId = attemptId`; duplicarlo contaría conversiones dobles).
+`toRudderTrack` devuelve `{ event, properties, options }` y reparte según el spec: **lo que el evento midió va a `properties`** (negocio aplanado, `values`, dimensiones, `event_id`) y **lo que es entorno va a `context`**, viajando por las options del SDK, que mergea toda clave no reservada adentro de context:
+
+```
+context.ip                 IP de la sesión (la ve el edge, no el navegador)
+context.location           city · country · region · latitude · longitude · postal_code
+context.hosting.supplier   quién reportó el geo ("vercel") — única clave no estándar
+context.loaded_at          ancla de la carga de página
+```
+
+Así el geo cae donde cualquier warehouse lo aplana solo (`context_location_country`) en vez de quedar en un blob propietario adentro de properties. **`timezone` del hosting se descarta a propósito**: el SDK ya pone el del navegador, que es el real; el del edge es una adivinanza desde la IP.
+
+**`pushers/`** — `rudderstack.ts` (el viejo `src/analytics.js`: SDK en idle con timeout, cola pre-SDK, `page()` manual, batch, sin beacon; recibe TODO el gateway), `fb/` (copia completa de `facebook-push-events` + mapping SOLO de eventos de negocio a conversiones estándar — **Lead excluido a propósito**: ya lo dispara `startRegisterAttempt` con `eventId = attemptId`; duplicarlo contaría conversiones dobles) y `activeSessions.ts` (presencia en vivo).
+
+### Presencia en vivo (`activeSessions`)
+
+Un nodo por **pestaña abierta** en Firebase Realtime Database, para un panel de "visitantes ahora" que lee **otra app**. Se enciende con `startDelivery({ activeSessions: true })`.
+
+```
+/activeSessions/{tabId}
+  started_at · last_seen · visible · page · engaged_time_sec
+  geo: { lat, lng, city, region, country }
+  events/{event_id}: { event, properties, options }   ← idéntico a lo que va a la ingesta
+```
+
+Los eventos salen del **mismo `toRudderTrack`** que la ingesta, así que la fidelidad es por construcción. Salvedad: no es literalmente el payload final: el SDK de RudderStack agrega adentro suyo su `messageId`, el `sentAt` y su bloque de context (page, screen, os, locale, campaign, sessionId). El payload literal solo existe en `raw`.
+
+**La limpieza la hace el servidor, no el navegador.** Se registra `onDisconnect().remove()`: cuando se corta el socket, Firebase borra el nodo — cubre crash, batería, swipe y cierre de tapa. El borrado en `pagehide` es solo el camino rápido. Dos consecuencias a saber: el servidor tarda ~30-60 s en detectar una conexión muerta (el contador queda unos segundos inflado, como en todos estos paneles), y una pestaña en segundo plano sigue conectada — por eso el nodo lleva `visible`, para que la app lectora decida si la cuenta.
+
+Se escribe por hijo (`events/{event_id}`), así que agregar un evento no reescribe el nodo. El SDK de Firebase entra por import dinámico en idle: no pesa en el LCP.
+
+**Requisitos del host**: una instancia de RTDB y reglas que permitan escribir en ese nodo. Se enciende pasándole el `databaseURL` — es público, igual que el writeKey, y para *escribir* en RTDB alcanza con eso (el `apiKey` solo hace falta para auth), así que el pusher no depende de ningún endpoint de la app. Con `activeSessions: true` en vez de la URL, la deduce del `projectId` que sirva `/api/firebase-config`.
 
 ## Requisitos del host
 

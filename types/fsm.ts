@@ -37,18 +37,24 @@ export interface ScrollStreakConfig {
   maxPx?: number;
 }
 
-/** Scroll despectivo: un solo gesto que supere `minPx`, partiendo de profundidad ≤ `maxFromDepth`. */
+/** Scroll despectivo: un solo gesto que supere `minPx`. Hacia arriba, todos
+ * menos la barrida completa al tope, que es territorio de toTopScroll. */
 export interface SkimScrollConfig {
   minPx: number;
-  /** 0..1: por encima de esto el gesto es territorio de toTopScroll. */
-  maxFromDepth: number;
+  /** 0..1: los mismos umbrales de ToTopScrollConfig — lo que skim le CEDE.
+   * Duplicados a propósito: ninguna FSM importa de otra. Mantener en sync. */
+  fullSweepFromDepth: number;
+  fullSweepToDepth: number;
 }
 
-/** Vuelta al tope: un gesto hacia arriba que supere `minPx`, partiendo de profundidad > `minDepth`. */
+/** Vuelta al tope: un solo gesto que sale de profundidad > `minFromDepth` y
+ * aterriza en < `maxToDepth`. Sin umbral de px: se define por recorrido, así
+ * escala solo entre mobile y desktop. */
 export interface ToTopScrollConfig {
-  minPx: number;
   /** 0..1: profundidad en la que estaba el usuario antes del gesto. */
-  minDepth: number;
+  minFromDepth: number;
+  /** 0..1: profundidad a la que llega. */
+  maxToDepth: number;
 }
 
 /** Bounce: la sesión termina antes de `maxSeconds`. */

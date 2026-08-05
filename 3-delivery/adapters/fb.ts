@@ -1,6 +1,6 @@
 // Adapter de Meta: función PURA, sin IO — envelope + metadata + mapping →
 // conversión de Meta (o null si el evento no mapea a ninguna). El eventId es
-// el message_id del envelope: pixel, CAPI y bronze deduplican con el mismo id.
+// el event_id del envelope: pixel, CAPI y bronze deduplican con el mismo id.
 
 import type {
   BusinessEventPayload,
@@ -44,7 +44,7 @@ export function toFbPush(
   return {
     event,
     options: {
-      eventId: envelope.message_id,
+      eventId: envelope.event_id,
       ...(Object.keys(customData).length > 0 ? { customData } : {}),
       ...(Object.keys(userData).length > 0 ? { userData } : {}),
     },
