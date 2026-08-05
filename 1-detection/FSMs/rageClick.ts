@@ -36,10 +36,12 @@ export const startRageClick = (cfg: RageClickConfig = config) =>
         });
         if (qualifies) {
           gateway.emit(BehaviorEventNames.RageClick, {
-            clicks: burst.length,
-            span_ms: burst[burst.length - 1].timestamp - burst[0].timestamp,
-            x: burst[0].x,
-            y: burst[0].y,
+            values: [
+              { name: "clicks", value: burst.length },
+              { name: "span_ms", value: burst[burst.length - 1].timestamp - burst[0].timestamp },
+              { name: "x", value: burst[0].x },
+              { name: "y", value: burst[0].y },
+            ],
           });
         }
       },

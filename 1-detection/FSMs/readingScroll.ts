@@ -34,8 +34,11 @@ export const startReadingScroll = (cfg: ScrollStreakConfig = config) =>
         );
         if (ctx.streak.length < cfg.count) return;
         gateway.emit(BehaviorEventNames.ReadingScroll, {
-          deltas_px: ctx.streak.map(s => s.px),
-          span_seconds: (gesture.timestamp - ctx.streak[0].at) / 1000,
+          values: [
+            { name: "gestures", value: ctx.streak.length },
+            { name: "total_px", value: ctx.streak.reduce((sum, s) => sum + s.px, 0) },
+            { name: "span_seconds", value: (gesture.timestamp - ctx.streak[0].at) / 1000 },
+          ],
         });
         ctx.streak = []; // re-arma: la próxima ocasión necesita gestos nuevos
       },

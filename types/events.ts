@@ -19,24 +19,46 @@ export enum BehaviorEventNames {
   ComponentFocus = "component_focus",
 }
 
+/** Una medición. Los eventos con valores los mandan como lista uniforme, para
+ * que silver los desanide sin conocer el esquema de cada evento. Solo métricas:
+ * lo categórico (`component`, `direction`) viaja como propiedad suelta, porque
+ * es con lo que agrupás, no lo que medís. */
+export interface EventValue<N extends string = string> {
+  name: N;
+  value: number;
+}
+
 export interface BehaviorEvents {
-  [BehaviorEventNames.RelevantSession]: { seconds: number; event_counts: Record<string, number> };
-  [BehaviorEventNames.ActiveSession]: { seconds: number; scroll_depth: number };
-  [BehaviorEventNames.DepthScroll]: { level: number; scroll_depth: number };
-  [BehaviorEventNames.ReadingScroll]: { deltas_px: number[]; span_seconds: number };
-  [BehaviorEventNames.SkimScroll]: { delta_px: number; direction: ScrollDirection };
-  [BehaviorEventNames.ToTopScroll]: { delta_px: number; from_depth: number; to_depth: number };
-  [BehaviorEventNames.DiagonalScroll]: { deltas_px: number[]; span_seconds: number };
-  [BehaviorEventNames.Bounce]: { seconds: number };
-  [BehaviorEventNames.TotalClicks]: { clicks: number };
-  [BehaviorEventNames.RageClick]: { clicks: number; span_ms: number; x: number; y: number };
+  [BehaviorEventNames.RelevantSession]: {
+    values: EventValue<"seconds" | `count_${BehaviorEventNames}`>[];
+  };
+  [BehaviorEventNames.ActiveSession]: { values: EventValue<"seconds" | "scroll_depth">[] };
+  [BehaviorEventNames.DepthScroll]: { values: EventValue<"level" | "scroll_depth">[] };
+  [BehaviorEventNames.ReadingScroll]: { values: EventValue<ScrollStreakValue>[] };
+  [BehaviorEventNames.SkimScroll]: {
+    direction: ScrollDirection;
+    values: EventValue<"delta_px">[];
+  };
+  [BehaviorEventNames.ToTopScroll]: {
+    values: EventValue<"delta_px" | "from_depth" | "to_depth">[];
+  };
+  [BehaviorEventNames.DiagonalScroll]: { values: EventValue<ScrollStreakValue>[] };
+  [BehaviorEventNames.Bounce]: { values: EventValue<"seconds">[] };
+  [BehaviorEventNames.TotalClicks]: { values: EventValue<"clicks">[] };
+  [BehaviorEventNames.RageClick]: {
+    values: EventValue<"clicks" | "span_ms" | "x" | "y">[];
+  };
   [BehaviorEventNames.ComponentFocus]: {
     component: string;
-    dwell_seconds: number;
     entered_from?: ScrollDirection;
     exited_to?: ScrollDirection;
+    values: EventValue<"dwell_seconds">[];
   };
 }
+
+/** Los deltas individuales de la racha se resumen: un array adentro de `value`
+ * no lo desanida cómodo ningún motor, y lo que se consulta es el agregado. */
+type ScrollStreakValue = "gestures" | "total_px" | "span_seconds";
 
 // ── Negocio (app → gateway) ──────────────────────────────────────────
 

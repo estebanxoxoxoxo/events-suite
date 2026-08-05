@@ -25,7 +25,9 @@ export const startBounce = (cfg: BounceConfig = config) =>
         }
         const seconds = (Date.now() - ctx.startedAt) / 1000;
         if (seconds < cfg.maxSeconds) {
-          gateway.emit(BehaviorEventNames.Bounce, { seconds: +seconds.toFixed(2) });
+          gateway.emit(BehaviorEventNames.Bounce, {
+            values: [{ name: "seconds", value: +seconds.toFixed(2) }],
+          });
         }
         return DONE;
       },

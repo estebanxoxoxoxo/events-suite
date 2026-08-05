@@ -26,7 +26,10 @@ export const startSkimScroll = (cfg: SkimScrollConfig = config) =>
           gesture.deltaPx > cfg.minPx &&
           gesture.fromDepth <= cfg.maxFromDepth
         ) {
-          gateway.emit(BehaviorEventNames.SkimScroll, { delta_px: gesture.deltaPx, direction: gesture.direction });
+          gateway.emit(BehaviorEventNames.SkimScroll, {
+            direction: gesture.direction, // dimensión: queda fuera de values
+            values: [{ name: "delta_px", value: gesture.deltaPx }],
+          });
         }
       },
     },

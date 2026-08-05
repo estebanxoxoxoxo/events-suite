@@ -25,7 +25,9 @@ export const startTotalClicks = (cfg: TotalClicksConfig = config) =>
           return;
         }
         if (ctx.total >= cfg.minClicks) {
-          gateway.emit(BehaviorEventNames.TotalClicks, { clicks: ctx.total });
+          gateway.emit(BehaviorEventNames.TotalClicks, {
+            values: [{ name: "clicks", value: ctx.total }],
+          });
         }
         return DONE;
       },

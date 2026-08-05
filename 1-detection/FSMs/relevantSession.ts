@@ -31,7 +31,17 @@ export const startRelevantSession = (cfg: RelevantSessionConfig = config) => {
           rule => rule.events.reduce((sum, name) => sum + (ctx.counts[name] ?? 0), 0) >= rule.min,
         );
         if (ctx.seconds >= cfg.minSeconds && rulesOk) {
-          gateway.emit(BehaviorEventNames.RelevantSession, { seconds: ctx.seconds, event_counts: { ...ctx.counts } });
+          gateway.emit(BehaviorEventNames.RelevantSession, {
+            values: [
+              { name: "seconds", value: ctx.seconds },
+              // un item por evento contado: `event_counts` era un objeto de
+              // claves dinámicas, lo peor posible para consultar en el lake
+              ...Object.entries(ctx.counts).map(([event, count]) => ({
+                name: `count_${event}` as `count_${BehaviorEventNames}`,
+                value: count,
+              })),
+            ],
+          });
           return DONE;
         }
       },

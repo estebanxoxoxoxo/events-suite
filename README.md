@@ -167,8 +167,40 @@ Un «gesto» es el neto de un scroll asentado tras 250 ms sin actividad: `{ delt
 Dominancia relativa al viewport (IntersectionObserver, sin coordenadas); el valor del atributo viaja como `component`. No anidar etiquetas. Elementos que montan tarde entran solos (MutationObserver). Payload de `component_focus`:
 
 ```json
-{ "component": "problema", "dwell_seconds": 4.38, "entered_from": "down", "exited_to": "down" }
+{
+  "component": "problema",
+  "entered_from": "down",
+  "exited_to": "down",
+  "values": [{ "name": "dwell_seconds", "value": 4.38 }]
+}
 ```
+
+### Valores: `values: [{ name, value }]`
+
+**Los 11 eventos de comportamiento** mandan sus mediciones como una lista uniforme, en vez de claves propias por evento. Así silver las desanida sin conocer el esquema de cada uno: una sola consulta las saca todas.
+
+Tres reglas:
+
+- **Solo métricas numéricas.** `value` es siempre `number`, así que silver no castea.
+- **Lo categórico queda afuera.** `component`, `direction`, `entered_from`, `exited_to` viajan como propiedad suelta al lado de `values`: son con lo que agrupás, no lo que medís, y adentro del array obligarían a desanidar para filtrar.
+- **Nada de arrays adentro de `value`.** Las rachas (`reading_scroll`, `diagonal_scroll`) resumen sus deltas en `gestures`, `total_px` y `span_seconds`.
+
+`relevant_session` es el que más gana: los conteos que antes vivían en el objeto de claves dinámicas `event_counts` ahora son un item por evento (`count_reading_scroll`, `count_diagonal_scroll`).
+
+| Evento | `values` | Dimensiones |
+|---|---|---|
+| `relevant_session` | `seconds` + `count_<evento>` | — |
+| `active_session` | `seconds`, `scroll_depth` | — |
+| `depth_scroll` | `level`, `scroll_depth` | — |
+| `reading_scroll` · `diagonal_scroll` | `gestures`, `total_px`, `span_seconds` | — |
+| `skim_scroll` | `delta_px` | `direction` |
+| `to_top_scroll` | `delta_px`, `from_depth`, `to_depth` | — |
+| `bounce` | `seconds` | — |
+| `total_clicks` | `clicks` | — |
+| `rage_click` | `clicks`, `span_ms`, `x`, `y` | — |
+| `component_focus` | `dwell_seconds` | `component`, `entered_from`, `exited_to` |
+
+Los eventos de negocio no usan `values`: siguen con `eventType` + `metadata`, que el adapter aplana.
 
 ## Delivery: metadata, adapters y pushers
 
