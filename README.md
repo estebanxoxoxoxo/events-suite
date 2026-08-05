@@ -244,7 +244,7 @@ Los eventos salen del **mismo `toRudderTrack`** que la ingesta, así que la fide
 
 Se escribe por hijo (`events/{event_id}`), así que agregar un evento no reescribe el nodo. El SDK de Firebase entra por import dinámico en idle: no pesa en el LCP.
 
-**Requisitos del host**: una instancia de RTDB y reglas que permitan escribir en ese nodo. Se enciende pasándole el `databaseURL` — es público, igual que el writeKey, y para *escribir* en RTDB alcanza con eso (el `apiKey` solo hace falta para auth), así que el pusher no depende de ningún endpoint de la app. Con `activeSessions: true` en vez de la URL, la deduce del `projectId` que sirva `/api/firebase-config`.
+**Requisitos del host**: una instancia de RTDB y reglas que permitan escribir en ese nodo. Se enciende pasándole el `databaseURL` en `startDelivery({ activeSessions: "https://…firebaseio.com" })` — es público, igual que el writeKey, y para *escribir* en RTDB alcanza con eso (el `apiKey` solo hace falta para auth). Por eso el pusher **no depende de ningún endpoint de la app**: una constante, no un round-trip.
 
 ## Requisitos del host
 

@@ -15,23 +15,22 @@
 import { registerDispatcher } from "../channel";
 import { sessionMetadata } from "../adapters/metadata";
 import { toRudderTrack } from "../adapters/rudderstack";
-import type { EventEnvelope, HostingMetadata } from "../../types";
+import type { EventEnvelope, HostingMetadata, SessionMetadata } from "../../types";
 import type { Database } from "firebase/database";
 
 const config = {
   /** Nodo raíz. Un hijo por pestaña abierta. */
   root: "activeSessions",
-  /** Vacío = se deduce de projectId (instancia default). */
+  /** OBLIGATORIA: sin esto el pusher no arranca. Es pública (viaja en el
+   * navegador, como el writeKey) y para ESCRIBIR en RTDB alcanza — el apiKey
+   * solo hace falta para auth. Por eso no dependemos de ningún endpoint. */
   databaseURL: "",
-  /** Config del proyecto: la sirve el host (la misma que usa la app). */
-  configEndpoint: "/api/firebase-config",
   idleTimeoutMs: 3000,
   idleFallbackMs: 1500,
   /** Refresco de `last_seen`, para distinguir vivo de colgado. */
   heartbeatMs: 30000,
 };
 
-type FirebaseConfig = { projectId?: string; databaseURL?: string };
 type DatabaseApi = typeof import("firebase/database");
 
 export interface SessionGeo {
@@ -50,6 +49,11 @@ export interface ActiveSessionNode {
   page: string;
   engaged_time_sec: number;
   geo: SessionGeo;
+  /** Un nodo es una PESTAÑA. Agrupar por acá convierte pestañas en personas:
+   * dos pestañas del mismo navegador comparten `anonymous_id`. Llega tarde
+   * (lo crea el SDK al cargar), así que puede faltar los primeros segundos. */
+  anonymous_id?: string;
+  session_id?: string;
 }
 
 const isVisible = () => typeof document === "undefined" || document.visibilityState !== "hidden";
@@ -75,9 +79,10 @@ export function toGeo(hosting: HostingMetadata): SessionGeo {
 /** PURA: el resumen vivo que va arriba del nodo. */
 export function toSessionNode(
   envelope: EventEnvelope,
-  hosting: HostingMetadata,
+  metadata: SessionMetadata,
   startedAt: string,
 ): ActiveSessionNode {
+  const { anonymous_id, session_id } = metadata.identity;
   return {
     started_at: startedAt,
     last_seen: envelope.timestamp,
@@ -85,7 +90,10 @@ export function toSessionNode(
     visible: isVisible(),
     page: envelope.context.page,
     engaged_time_sec: envelope.context.engaged_time_sec,
-    geo: toGeo(hosting),
+    geo: toGeo(metadata.metaDataFromHosting),
+    // undefined rompe a RTDB: se omiten hasta que el SDK los cree
+    ...(anonymous_id ? { anonymous_id } : {}),
+    ...(session_id ? { session_id } : {}),
   };
 }
 
@@ -103,6 +111,20 @@ const swallow = () => {
   /* la presencia nunca rompe la página */
 };
 
+/** Lo que puede cambiar sin que haya un evento: geo e ids llegan tarde (uno por
+ * red, los otros los crea el SDK al cargar), y visible/last_seen son del ahora. */
+const ambientPatch = () => {
+  const { metaDataFromHosting, identity } = sessionMetadata.get();
+  return {
+    last_seen: new Date().toISOString(),
+    visible: isVisible(),
+    engaged_time_sec: lastEngagedSec,
+    geo: toGeo(metaDataFromHosting),
+    ...(identity.anonymous_id ? { anonymous_id: identity.anonymous_id } : {}),
+    ...(identity.session_id ? { session_id: identity.session_id } : {}),
+  };
+};
+
 function dispatch(envelope: EventEnvelope) {
   if (!api || !db) {
     pending.push(envelope);
@@ -117,10 +139,7 @@ function dispatch(envelope: EventEnvelope) {
     properties,
     options,
   }).catch(swallow);
-  void api.update(
-    api.ref(db, nodePath),
-    toSessionNode(envelope, metadata.metaDataFromHosting, startedAt),
-  ).catch(swallow);
+  void api.update(api.ref(db, nodePath), toSessionNode(envelope, metadata, startedAt)).catch(swallow);
 }
 
 async function connect(cfg: typeof config, unsubs: (() => void)[]) {
@@ -129,28 +148,13 @@ async function connect(cfg: typeof config, unsubs: (() => void)[]) {
       import("firebase/app"),
       import("firebase/database"),
     ]);
-    // Para ESCRIBIR en RTDB alcanza el databaseURL: el apiKey y el resto de la
-    // config solo hacen falta para auth. Si la app lo pasa, no dependemos de
-    // ningún endpoint suyo; si no, se deduce del projectId que sirva el host.
-    let projectConfig: FirebaseConfig = {};
-    if (!cfg.databaseURL) {
-      const response = await fetch(cfg.configEndpoint);
-      projectConfig = response.ok ? await response.json() : {};
-    }
-    const databaseURL =
-      cfg.databaseURL ||
-      projectConfig.databaseURL ||
-      (projectConfig.projectId
-        ? `https://${projectConfig.projectId}-default-rtdb.firebaseio.com`
-        : "");
-    if (!databaseURL) return;
+    const databaseURL = cfg.databaseURL;
 
     // app con nombre propio: no pisa la que la app usa para auth. Reusar si ya
     // existe: initializeApp con el mismo nombre tira (pasa con el HMR).
     const name = "events-suite";
     const app =
-      getApps().find(existing => existing.name === name) ??
-      initializeApp({ ...projectConfig, databaseURL }, name);
+      getApps().find(existing => existing.name === name) ?? initializeApp({ databaseURL }, name);
     api = database;
     db = database.getDatabase(app, databaseURL);
 
@@ -164,28 +168,24 @@ async function connect(cfg: typeof config, unsubs: (() => void)[]) {
       if (snapshot.val() !== true || !api || !db) return;
       const node = api.ref(db, nodePath);
       void api.onDisconnect(node).remove();
+      // desde el primer instante, aunque no haya eventos todavía: el panel no
+      // tiene que lidiar con campos que aparecen más tarde
       void api.update(node, {
         started_at: startedAt,
-        last_seen: new Date().toISOString(),
-        visible: isVisible(),
         page: window.location.pathname,
-        // desde el primer instante, aunque todavía no haya eventos: el panel no
-        // tiene que lidiar con campos que aparecen más tarde. El valor real lo
-        // trae cada envelope; delivery no puede leerle el reloj a 1-detection.
-        engaged_time_sec: lastEngagedSec,
-        geo: toGeo(sessionMetadata.get().metaDataFromHosting),
+        ...ambientPatch(),
       }).catch(swallow);
     });
 
-    const beat = setInterval(() => {
-      if (!api || !db) return;
-      void api.update(api.ref(db, nodePath), {
-        last_seen: new Date().toISOString(),
-        visible: isVisible(),
-        engaged_time_sec: lastEngagedSec,
-      }).catch(swallow);
-    }, cfg.heartbeatMs);
+    const patch = () => {
+      if (!api || !db || !nodePath) return;
+      void api.update(api.ref(db, nodePath), ambientPatch()).catch(swallow);
+    };
+    const beat = setInterval(patch, cfg.heartbeatMs);
     unsubs.push(() => clearInterval(beat));
+    // el anonymous_id y la geo llegan después del arranque: en cuanto caen,
+    // el nodo se completa sin esperar al próximo evento ni al heartbeat
+    unsubs.push(sessionMetadata.subscribe(patch));
 
     const queued = pending;
     pending = [];
@@ -204,6 +204,10 @@ const newTabId = () =>
 export function startActiveSessions(overrides: Partial<typeof config> = {}): () => void {
   if (started || typeof window === "undefined") return () => {};
   const cfg = { ...config, ...overrides };
+  if (!cfg.databaseURL) {
+    console.warn("[events-suite] presencia sin databaseURL: no arranca");
+    return () => {};
+  }
   started = true;
 
   const unsubs: (() => void)[] = [registerDispatcher(dispatch)];

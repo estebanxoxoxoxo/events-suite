@@ -14,6 +14,14 @@ export interface HostingMetadata {
   timezone?: string;
 }
 
+/** La genera el SDK de RudderStack; la publica su pusher. `anonymous_id` es el
+ * id del NAVEGADOR (persistido: sobrevive recargas, pestañas y visitas de otro
+ * día) y es la clave para agrupar pestañas en personas. */
+export interface IdentityMetadata {
+  anonymous_id?: string;
+  session_id?: string;
+}
+
 /** La empuja la app post-auth vía setLoginMetadata(). */
 export interface LoginMetadata {
   user_id?: string | number;
@@ -32,6 +40,7 @@ export interface FbMetadata {
 
 export interface SessionMetadata {
   metaDataFromHosting: HostingMetadata;
+  identity: IdentityMetadata;
   login: LoginMetadata;
   fb: FbMetadata;
 }

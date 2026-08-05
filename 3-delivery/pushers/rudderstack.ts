@@ -9,7 +9,7 @@
 // requestIdleCallback para siempre); lo emitido antes queda en cola local.
 
 import { registerDispatcher } from "../channel";
-import { sessionMetadata } from "../adapters/metadata";
+import { sessionMetadata, setIdentityMetadata } from "../adapters/metadata";
 import { toRudderTrack } from "../adapters/rudderstack";
 import type { EventEnvelope, LoginMetadata } from "../../types";
 
@@ -30,7 +30,25 @@ type RudderSdk = {
     apiOptions?: Record<string, unknown>,
   ) => void;
   identify: (userId: string, traits?: Record<string, unknown>) => void;
+  getAnonymousId: () => string | undefined;
+  getSessionId: () => number | null | undefined;
 };
+
+/** El SDK es el dueño de estos dos ids; los publica en el registry para que
+ * los use quien los necesite (presencia agrupa pestañas por anonymous_id).
+ * Se relee en cada despacho: el session_id rota tras 30 min de inactividad. */
+function publishIdentity() {
+  if (!sdk) return;
+  try {
+    const sessionId = sdk.getSessionId();
+    setIdentityMetadata({
+      anonymous_id: sdk.getAnonymousId(),
+      session_id: sessionId === null || sessionId === undefined ? undefined : String(sessionId),
+    });
+  } catch {
+    /* noop */
+  }
+}
 
 let started = false;
 let sdk: RudderSdk | null = null;
@@ -46,6 +64,7 @@ function dispatch(envelope: EventEnvelope) {
     // Las options las arma el adapter: `originalTimestamp` (la ocurrencia real,
     // no la hora del despacho) y el entorno que el SDK mergea en `context`.
     sdk.track(event, properties, options);
+    publishIdentity();
   } catch {
     /* el tracking nunca rompe la página */
   }
@@ -80,6 +99,7 @@ async function loadSdk(cfg: typeof config) {
     });
     sdk = instance as unknown as RudderSdk;
     sdk.page(); // page() manual: un pageview por carga de la landing
+    publishIdentity(); // recién acá existen: los crea el SDK al cargar
     identify(sessionMetadata.get().login); // por si el login llegó antes que el SDK
     const queued = pending;
     pending = [];
