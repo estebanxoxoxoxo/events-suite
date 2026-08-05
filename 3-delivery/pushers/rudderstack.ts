@@ -2,7 +2,8 @@
 // suscribe al gateway (con replay: los eventos previos al arranque salen
 // igual), adapta cada envelope y despacha por el SDK, que aporta cola, batch
 // y retry. Reglas no negociables del pipeline: batch obligatorio, sin beacon,
-// sin autoTrack; page() manual acá; dataplane y sourceConfig same-origin.
+// sin page() automático (se llama manual acá); dataplane y sourceConfig
+// same-origin. El tracking de sesión del SDK SÍ va activo (ver load()).
 // El SDK se carga con import dinámico en idle para no pesar en el LCP (con
 // timeout: las animaciones continuas de la landing pueden postergar
 // requestIdleCallback para siempre); lo emitido antes queda en cola local.
@@ -72,7 +73,11 @@ async function loadSdk(cfg: typeof config) {
       queueOptions: { batch: { enabled: true, flushInterval: cfg.flushIntervalMs } },
       useBeacon: false,
       polyfillIfRequired: false,
-      sessions: { autoTrack: false },
+      // OJO: son dos autoTrack distintos. El que el pipeline prohíbe es el de
+      // page() automático; el de sesiones es el que agrega context.sessionId a
+      // cada evento (timeout por inactividad, 30 min = default del SDK y de
+      // GA4). Sin esto, un anonymous_id son N visitas pegadas en una sola.
+      sessions: { autoTrack: true, timeout: 1800000 },
       sendAdblockPage: false,
     });
     sdk = instance as unknown as RudderSdk;
