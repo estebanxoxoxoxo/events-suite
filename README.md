@@ -173,40 +173,38 @@ Un «gesto» es el neto de un scroll asentado tras 250 ms sin actividad: `{ delt
 Dominancia relativa al viewport (IntersectionObserver, sin coordenadas); el valor del atributo viaja como `component`. No anidar etiquetas. Elementos que montan tarde entran solos (MutationObserver). Payload de `component_focus`:
 
 ```json
-{
-  "component": "problema",
-  "entered_from": "down",
-  "exited_to": "down",
-  "values": [{ "name": "dwell_seconds", "value": 4.38 }]
-}
+{ "component": "problema", "dwell_seconds": 4.38, "entered_from": "down", "exited_to": "down" }
 ```
 
-### Valores: `values: [{ name, value }]`
+### Catálogo de payloads
 
-**Los 11 eventos de comportamiento** mandan sus mediciones como una lista uniforme, en vez de claves propias por evento. Así silver las desanida sin conocer el esquema de cada uno: una sola consulta las saca todas.
+Cada evento manda sus mediciones como **propiedades directas**, con su nombre. Sin envoltorios.
 
-Tres reglas:
+```json
+relevant_session  {"engaged_seconds":40,"count_reading_scroll":3,"count_diagonal_scroll":2}
+active_session    {"engaged_seconds":15,"scroll_depth":0.7638}
+bounce            {"engaged_seconds":3.2}
+depth_scroll      {"level":50,"scroll_depth":0.5124}
+reading_scroll    {"quantity":3,"gestures":[100,150,150],"span_seconds":0.65}
+diagonal_scroll   {"quantity":2,"gestures":[700,700],"span_seconds":0.33}
+skim_scroll       {"delta_px":5400,"direction":"down"}
+to_top_scroll     {"delta_px":8700,"from_depth":1,"to_depth":0.13}
+click             {"click":[0.0078,0.102]}
+rage_click        {"quantity":3,"span_ms":104,"x":0.0078,"y":0.102}
+component_focus   {"component":"problema","dwell_seconds":4.38,"entered_from":"down","exited_to":"up"}
+```
 
-- **`value` es numérico**, con una excepción: `click.coordinates` lleva el array de puntos `{x, y}` del mapa de clicks.
-- **Lo categórico queda afuera.** `component`, `direction`, `entered_from`, `exited_to` viajan como propiedad suelta al lado de `values`: son con lo que agrupás, no lo que medís, y adentro del array obligarían a desanidar para filtrar.
-- **Nada de arrays adentro de `value`.** Las rachas (`reading_scroll`, `diagonal_scroll`) resumen sus deltas en `gestures`, `total_px` y `span_seconds`.
+**Unidades**, que es donde se cometen los errores de lectura:
 
-`relevant_session` es el que más gana: los conteos que antes vivían en el objeto de claves dinámicas `event_counts` ahora son un item por evento (`count_reading_scroll`, `count_diagonal_scroll`).
+- **`engaged_seconds`** — segundos de ATENCIÓN, no de reloj. Los tres eventos de sesión leen el mismo reloj, por eso comparten el nombre. Y significan «a los N segundos se cumplió el criterio», no «la sesión duró N».
+- **`scroll_depth`, `from_depth`, `to_depth`, `level`** — porcentaje **visto** de la página. Nunca vale 0.
+- **`click`, `x`, `y`** — fracción del documento (0..1), no píxeles: así el mismo punto significa lo mismo en mobile y en desktop, y todos los clicks entran en un solo mapa. El cálculo vive en `lib/position.ts`, compartido por los dos eventos — con dos copias el redondeo se separa y dejan de ser comparables.
+- **`gestures`, `delta_px`, `span_ms`** — píxeles y milisegundos, enteros.
+- **`quantity`** — cantidad, en las rachas y en la ráfaga. En las rachas es `gestures.length`: redundante a propósito, para no contar el array en cada consulta.
 
-| Evento | `values` | Dimensiones |
-|---|---|---|
-| `relevant_session` | `seconds` + `count_<evento>` | — |
-| `active_session` | `seconds`, `scroll_depth` | — |
-| `depth_scroll` | `level`, `scroll_depth` | — |
-| `reading_scroll` · `diagonal_scroll` | `gestures`, `total_px`, `span_seconds` | — |
-| `skim_scroll` | `delta_px` | `direction` |
-| `to_top_scroll` | `delta_px`, `from_depth`, `to_depth` | — |
-| `bounce` | `engaged_seconds` | — |
-| `click` | `clicks`, `coordinates` | — |
-| `rage_click` | `clicks`, `span_ms`, `x`, `y` | — |
-| `component_focus` | `dwell_seconds` | `component`, `entered_from`, `exited_to` |
+Lo categórico (`component`, `direction`, `entered_from`, `exited_to`) viaja al lado: es con lo que agrupás, no lo que medís.
 
-Los eventos de negocio no usan `values`: siguen con `eventType` + `metadata`, que el adapter aplana.
+Los eventos de negocio no usan nada de esto: van con `eventType` + `metadata`, que el adapter aplana.
 
 ## Delivery: metadata, adapters y pushers
 
@@ -214,7 +212,7 @@ Los eventos de negocio no usan `values`: siguen con `eventType` + `metadata`, qu
 
 **`adapters/`** — funciones puras, sin IO: `toRudderTrack` y `toFbPush` (conversión con `eventId = event_id`).
 
-`toRudderTrack` devuelve `{ event, properties, options }` y reparte según el spec: **lo que el evento midió va a `properties`** (negocio aplanado, `values`, dimensiones, `event_id`) y **lo que es entorno va a `context`**, viajando por las options del SDK, que mergea toda clave no reservada adentro de context:
+`toRudderTrack` devuelve `{ event, properties, options }` y reparte según el spec: **lo que el evento midió va a `properties`** (negocio aplanado, las mediciones, las dimensiones, `event_id`) y **lo que es entorno va a `context`**, viajando por las options del SDK, que mergea toda clave no reservada adentro de context:
 
 ```
 context.ip                 IP de la sesión (la ve el edge, no el navegador)

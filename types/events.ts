@@ -19,52 +19,46 @@ export enum BehaviorEventNames {
   ComponentFocus = "component_focus",
 }
 
-/** Una medición. Los eventos con valores los mandan como lista uniforme, para
- * que silver los desanide sin conocer el esquema de cada evento. Solo métricas:
- * lo categórico (`component`, `direction`) viaja como propiedad suelta, porque
- * es con lo que agrupás, no lo que medís. */
-export interface EventValue<N extends string = string, V = number> {
-  name: N;
-  value: V;
-}
-
+/** Cada evento manda sus mediciones como PROPIEDADES DIRECTAS, con su nombre.
+ * Lo categórico (`component`, `direction`) viaja igual, al lado: es con lo que
+ * agrupás, no lo que medís. */
 export interface BehaviorEvents {
+  /** `engaged_seconds` en los tres eventos de sesión: los tres leen el mismo
+   * reloj de atención (timeSession), no el de pared. */
   [BehaviorEventNames.RelevantSession]: {
-    values: EventValue<"seconds" | `count_${BehaviorEventNames}`>[];
-  };
-  [BehaviorEventNames.ActiveSession]: { values: EventValue<"seconds" | "scroll_depth">[] };
-  [BehaviorEventNames.DepthScroll]: { values: EventValue<"level" | "scroll_depth">[] };
-  [BehaviorEventNames.ReadingScroll]: { values: EventValue<ScrollStreakValue>[] };
-  [BehaviorEventNames.SkimScroll]: {
-    direction: ScrollDirection;
-    values: EventValue<"delta_px">[];
-  };
-  [BehaviorEventNames.ToTopScroll]: {
-    values: EventValue<"delta_px" | "from_depth" | "to_depth">[];
-  };
-  [BehaviorEventNames.DiagonalScroll]: { values: EventValue<ScrollStreakValue>[] };
-  [BehaviorEventNames.Bounce]: { values: EventValue<"engaged_seconds">[] };
-  /** Un click, un evento. Un solo value: el par `[x, y]` en coordenadas del
-   * DOCUMENTO (no del viewport), que ubican el click en la página sin importar
-   * el scroll. La tupla obliga a que sea exactamente esa entrada. */
-  [BehaviorEventNames.Click]: { values: [EventValue<"click", ClickPoint>] };
-  [BehaviorEventNames.RageClick]: {
-    values: EventValue<"clicks" | "span_ms" | "x" | "y">[];
-  };
+    engaged_seconds: number;
+  } & Partial<Record<`count_${BehaviorEventNames}`, number>>;
+  [BehaviorEventNames.ActiveSession]: { engaged_seconds: number; scroll_depth: number };
+  [BehaviorEventNames.DepthScroll]: { level: number; scroll_depth: number };
+  [BehaviorEventNames.ReadingScroll]: ScrollStreak;
+  [BehaviorEventNames.SkimScroll]: { delta_px: number; direction: ScrollDirection };
+  [BehaviorEventNames.ToTopScroll]: { delta_px: number; from_depth: number; to_depth: number };
+  [BehaviorEventNames.DiagonalScroll]: ScrollStreak;
+  [BehaviorEventNames.Bounce]: { engaged_seconds: number };
+  /** Un click, un evento: `[x, y]` como FRACCIÓN del documento (0..1), no en
+   * píxeles — así el mismo punto significa lo mismo en mobile y en desktop. */
+  [BehaviorEventNames.Click]: { click: ClickPoint };
+  /** `quantity` = clicks de la ráfaga, mismo nombre que en las rachas. `x`/`y`
+   * son fracción del documento, como en `click`. */
+  [BehaviorEventNames.RageClick]: { quantity: number; span_ms: number; x: number; y: number };
   [BehaviorEventNames.ComponentFocus]: {
     component: string;
+    dwell_seconds: number;
     entered_from?: ScrollDirection;
     exited_to?: ScrollDirection;
-    values: EventValue<"dwell_seconds">[];
   };
 }
 
-/** Los deltas individuales de la racha se resumen: un array adentro de `value`
- * no lo desanida cómodo ningún motor, y lo que se consulta es el agregado. */
-type ScrollStreakValue = "gestures" | "total_px" | "span_seconds";
+/** Racha de gestos: cuántos, el detalle px de cada uno en orden, y cuánto duró.
+ * `quantity` es `gestures.length` — redundante a propósito, para no tener que
+ * contar el array en cada consulta. */
+interface ScrollStreak {
+  quantity: number;
+  gestures: number[];
+  span_seconds: number;
+}
 
-/** Coordenada de un click: `[x, y]`. Es el único `value` que no es un número
- * suelto — `values` sigue siendo siempre la lista de entradas `{name, value}`. */
+/** Posición de un click: `[x, y]` como fracción del ancho y alto del documento. */
 export type ClickPoint = [number, number];
 
 // ── Negocio (app → gateway) ──────────────────────────────────────────

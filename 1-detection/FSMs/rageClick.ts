@@ -5,6 +5,7 @@
 import { createFSM } from "./createFSM";
 import { gateway } from "../../2-gateway";
 import { clicks } from "../sources/clicks";
+import { toDocumentFraction } from "../../lib/position";
 import { BehaviorEventNames, type ClickData, type RageClickConfig } from "../../types";
 
 const config: RageClickConfig = {
@@ -35,13 +36,13 @@ export const startRageClick = (cfg: RageClickConfig = config) =>
           return n >= cfg.count;
         });
         if (qualifies) {
+          // dónde empezó la ráfaga, en fracción del documento como el resto
+          const [x, y] = toDocumentFraction(burst[0].pageX, burst[0].pageY);
           gateway.emit(BehaviorEventNames.RageClick, {
-            values: [
-              { name: "clicks", value: burst.length },
-              { name: "span_ms", value: burst[burst.length - 1].timestamp - burst[0].timestamp },
-              { name: "x", value: burst[0].x },
-              { name: "y", value: burst[0].y },
-            ],
+            quantity: burst.length,
+            span_ms: burst[burst.length - 1].timestamp - burst[0].timestamp,
+            x,
+            y,
           });
         }
       },
