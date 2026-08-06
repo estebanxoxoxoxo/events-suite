@@ -26,8 +26,7 @@ export const startActiveSession = (cfg: SessionMilestoneConfig = config) =>
         else ctx.maxDepth = Math.max(ctx.maxDepth, input.depth);
         if (ctx.seconds >= cfg.minSeconds && ctx.maxDepth >= cfg.minScrollDepth) {
           gateway.emit(BehaviorEventNames.ActiveSession, {
-            engaged_seconds: ctx.seconds,
-            scroll_depth: ctx.maxDepth,
+            values: [{ engaged_seconds: ctx.seconds }, { scroll_depth: ctx.maxDepth }],
           });
           return DONE;
         }

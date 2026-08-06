@@ -22,53 +22,91 @@ export enum BehaviorEventNames {
   ComponentFocus = "component_focus",
 }
 
-/** Cada evento manda sus mediciones como PROPIEDADES DIRECTAS, con su nombre.
- * Lo categórico (`component`, `direction`) viaja igual, al lado: es con lo que
- * agrupás, no lo que medís. */
+/** TODAS las propiedades del evento viajan dentro de `values`: un array donde
+ * cada item es UNA propiedad, ya con su nombre — `{ "quantity": 3 }`. Un solo
+ * contenedor para todos los eventos, así el que los lee no necesita conocer el
+ * esquema de cada uno para recorrerlos. */
+export type Values<T> = { [K in keyof Required<T>]: Pick<Required<T>, K> }[keyof Required<T>][];
+
 export interface BehaviorEvents {
-  /** `engaged_seconds` en los tres eventos de sesión: los tres leen el mismo
-   * reloj de atención (timeSession), no el de pared. */
-  [BehaviorEventNames.RelevantSession]: {
-    engaged_seconds: number;
-  } & Partial<Record<`count_${BehaviorEventNames}`, number>>;
-  [BehaviorEventNames.ActiveSession]: { engaged_seconds: number; scroll_depth: number };
+  [BehaviorEventNames.RelevantSession]: { values: Values<RelevantSessionValues> };
+  [BehaviorEventNames.ActiveSession]: { values: Values<ActiveSessionValues> };
   /** El umbral está en el nombre del evento, así que el payload no lo repite:
    * lleva CUÁNTO TARDÓ en llegar, que es lo que el nombre no dice. */
-  [BehaviorEventNames.Scroll25]: ScrollMilestone;
-  [BehaviorEventNames.Scroll50]: ScrollMilestone;
-  [BehaviorEventNames.Scroll75]: ScrollMilestone;
-  [BehaviorEventNames.Scroll90]: ScrollMilestone;
-  [BehaviorEventNames.ReadingScroll]: ScrollStreak;
-  [BehaviorEventNames.SkimScroll]: { delta_px: number; direction: ScrollDirection };
-  [BehaviorEventNames.ToTopScroll]: { delta_px: number; from_depth: number; to_depth: number };
-  [BehaviorEventNames.DiagonalScroll]: ScrollStreak;
-  [BehaviorEventNames.Bounce]: { engaged_seconds: number };
-  /** Un click, un evento: `[x, y]` como FRACCIÓN del documento (0..1), no en
-   * píxeles — así el mismo punto significa lo mismo en mobile y en desktop. */
-  [BehaviorEventNames.Click]: { click: ClickPoint };
-  /** `quantity` = clicks de la ráfaga, mismo nombre que en las rachas. `x`/`y`
-   * son fracción del documento, como en `click`. */
-  [BehaviorEventNames.RageClick]: { quantity: number; span_ms: number; x: number; y: number };
-  [BehaviorEventNames.ComponentFocus]: {
-    component: string;
-    dwell_seconds: number;
-    entered_from?: ScrollDirection;
-    exited_to?: ScrollDirection;
-  };
+  [BehaviorEventNames.Scroll25]: { values: Values<ScrollMilestoneValues> };
+  [BehaviorEventNames.Scroll50]: { values: Values<ScrollMilestoneValues> };
+  [BehaviorEventNames.Scroll75]: { values: Values<ScrollMilestoneValues> };
+  [BehaviorEventNames.Scroll90]: { values: Values<ScrollMilestoneValues> };
+  [BehaviorEventNames.ReadingScroll]: { values: Values<ScrollStreakValues> };
+  [BehaviorEventNames.DiagonalScroll]: { values: Values<ScrollStreakValues> };
+  [BehaviorEventNames.SkimScroll]: { values: Values<SkimScrollValues> };
+  [BehaviorEventNames.ToTopScroll]: { values: Values<ToTopScrollValues> };
+  [BehaviorEventNames.Bounce]: { values: Values<BounceValues> };
+  [BehaviorEventNames.Click]: { values: Values<ClickValues> };
+  [BehaviorEventNames.RageClick]: { values: Values<RageClickValues> };
+  [BehaviorEventNames.ComponentFocus]: { values: Values<ComponentFocusValues> };
+}
+
+/** `engaged_seconds` en los eventos de sesión y en los hitos: todos leen el
+ * mismo reloj de atención (timeSession), no el de pared. */
+type RelevantSessionValues = { engaged_seconds: number } & Partial<
+  Record<`count_${BehaviorEventNames}`, number>
+>;
+
+interface ActiveSessionValues {
+  engaged_seconds: number;
+  scroll_depth: number;
+}
+
+interface BounceValues {
+  engaged_seconds: number;
 }
 
 /** Hito de profundidad: segundos de atención hasta cruzarlo. */
-interface ScrollMilestone {
+interface ScrollMilestoneValues {
   engaged_seconds: number;
 }
 
 /** Racha de gestos: cuántos, el detalle px de cada uno en orden, y cuánto duró.
  * `quantity` es `gestures.length` — redundante a propósito, para no tener que
  * contar el array en cada consulta. */
-interface ScrollStreak {
+interface ScrollStreakValues {
   quantity: number;
   gestures: number[];
   span_seconds: number;
+}
+
+interface SkimScrollValues {
+  delta_px: number;
+  direction: ScrollDirection;
+}
+
+interface ToTopScrollValues {
+  delta_px: number;
+  from_depth: number;
+  to_depth: number;
+}
+
+/** Un click, un evento: `[x, y]` como FRACCIÓN del documento (0..1), no en
+ * píxeles — así el mismo punto significa lo mismo en mobile y en desktop. */
+interface ClickValues {
+  click: ClickPoint;
+}
+
+/** `quantity` = clicks de la ráfaga, mismo nombre que en las rachas. `x`/`y`
+ * son fracción del documento, como en `click`. */
+interface RageClickValues {
+  quantity: number;
+  span_ms: number;
+  x: number;
+  y: number;
+}
+
+interface ComponentFocusValues {
+  component: string;
+  dwell_seconds: number;
+  entered_from?: ScrollDirection;
+  exited_to?: ScrollDirection;
 }
 
 /** Posición de un click: `[x, y]` como fracción del ancho y alto del documento. */

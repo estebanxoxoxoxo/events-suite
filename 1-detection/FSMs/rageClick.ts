@@ -39,10 +39,12 @@ export const startRageClick = (cfg: RageClickConfig = config) =>
           // dónde empezó la ráfaga, en fracción del documento como el resto
           const [x, y] = toDocumentFraction(burst[0].pageX, burst[0].pageY);
           gateway.emit(BehaviorEventNames.RageClick, {
-            quantity: burst.length,
-            span_ms: burst[burst.length - 1].timestamp - burst[0].timestamp,
-            x,
-            y,
+            values: [
+              { quantity: burst.length },
+              { span_ms: burst[burst.length - 1].timestamp - burst[0].timestamp },
+              { x },
+              { y },
+            ],
           });
         }
       },

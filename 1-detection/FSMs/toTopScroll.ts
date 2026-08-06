@@ -27,9 +27,11 @@ export const startToTopScroll = (cfg: ToTopScrollConfig = config) =>
           gesture.scrollDepth < cfg.maxToDepth
         ) {
           gateway.emit(BehaviorEventNames.ToTopScroll, {
-            delta_px: gesture.deltaPx,
-            from_depth: gesture.fromDepth,
-            to_depth: gesture.scrollDepth,
+            values: [
+              { delta_px: gesture.deltaPx },
+              { from_depth: gesture.fromDepth },
+              { to_depth: gesture.scrollDepth },
+            ],
           });
         }
       },

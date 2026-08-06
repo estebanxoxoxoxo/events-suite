@@ -17,7 +17,9 @@ export const startScroll50 = () =>
     states: {
       watching({ depth }) {
         if (depth < LEVEL) return;
-        gateway.emit(BehaviorEventNames.Scroll50, { engaged_seconds: timeSession.getSeconds() });
+        gateway.emit(BehaviorEventNames.Scroll50, {
+          values: [{ engaged_seconds: timeSession.getSeconds() }],
+        });
         return DONE;
       },
     },

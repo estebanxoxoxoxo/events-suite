@@ -18,7 +18,9 @@ export const startScroll25 = () =>
       watching({ depth }) {
         if (depth < LEVEL) return;
         // el umbral ya está en el nombre; lo que aporta es cuánto tardó
-        gateway.emit(BehaviorEventNames.Scroll25, { engaged_seconds: timeSession.getSeconds() });
+        gateway.emit(BehaviorEventNames.Scroll25, {
+          values: [{ engaged_seconds: timeSession.getSeconds() }],
+        });
         return DONE;
       },
     },

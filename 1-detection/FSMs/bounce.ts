@@ -28,7 +28,7 @@ export const startBounce = (cfg: BounceConfig = config) =>
         // al momento, no del último tick: el source lo calcula por resta
         const seconds = timeSession.getSeconds();
         if (seconds < cfg.maxSeconds) {
-          gateway.emit(BehaviorEventNames.Bounce, { engaged_seconds: seconds });
+          gateway.emit(BehaviorEventNames.Bounce, { values: [{ engaged_seconds: seconds }] });
         }
         return DONE;
       },

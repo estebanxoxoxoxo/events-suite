@@ -48,10 +48,12 @@ export const startComponentFocus = (cfg: ComponentFocusConfig = config) =>
         if (dwell >= cfg.minSeconds && dwell <= cfg.maxSeconds) {
           const exitedTo = scrollYData.liveDirection();
           gateway.emit(BehaviorEventNames.ComponentFocus, {
-            component: focus.component,
-            dwell_seconds: +dwell.toFixed(2),
-            ...(focus.enteredFrom ? { entered_from: focus.enteredFrom } : {}),
-            ...(exitedTo ? { exited_to: exitedTo } : {}),
+            values: [
+              { component: focus.component },
+              { dwell_seconds: +dwell.toFixed(2) },
+              ...(focus.enteredFrom ? [{ entered_from: focus.enteredFrom }] : []),
+              ...(exitedTo ? [{ exited_to: exitedTo }] : []),
+            ],
           });
         }
         if (input.component) {

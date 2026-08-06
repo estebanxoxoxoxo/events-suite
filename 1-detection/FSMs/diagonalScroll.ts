@@ -35,10 +35,12 @@ export const startDiagonalScroll = (cfg: ScrollStreakConfig = config) =>
         );
         if (ctx.streak.length < cfg.count) return;
         gateway.emit(BehaviorEventNames.DiagonalScroll, {
-          quantity: ctx.streak.length,
-          // el detalle px de cada gesto, en orden: el total es su suma
-          gestures: ctx.streak.map(s => Math.round(s.px)),
-          span_seconds: (gesture.timestamp - ctx.streak[0].at) / 1000,
+          values: [
+            { quantity: ctx.streak.length },
+            // el detalle px de cada gesto, en orden: el total es su suma
+            { gestures: ctx.streak.map(s => Math.round(s.px)) },
+            { span_seconds: (gesture.timestamp - ctx.streak[0].at) / 1000 },
+          ],
         });
         ctx.streak = []; // re-arma: la próxima ocasión necesita gestos nuevos
       },

@@ -32,12 +32,15 @@ export const startRelevantSession = (cfg: RelevantSessionConfig = config) => {
         );
         if (ctx.seconds >= cfg.minSeconds && rulesOk) {
           gateway.emit(BehaviorEventNames.RelevantSession, {
-            engaged_seconds: ctx.seconds,
-            // una propiedad por evento contado: `event_counts` era un objeto de
-            // claves dinámicas, lo peor posible para consultar en el lake
-            ...Object.fromEntries(
-              Object.entries(ctx.counts).map(([event, count]) => [`count_${event}`, count]),
-            ),
+            values: [
+              { engaged_seconds: ctx.seconds },
+              // un item por evento contado: `event_counts` era un objeto de
+              // claves dinámicas, lo peor posible para consultar en el lake
+              ...Object.entries(ctx.counts).map(
+                ([event, count]) =>
+                  ({ [`count_${event}`]: count }) as { [K in `count_${BehaviorEventNames}`]: number },
+              ),
+            ],
           });
           return DONE;
         }

@@ -23,7 +23,7 @@ export const startClick = () =>
     states: {
       watching(click) {
         gateway.emit(BehaviorEventNames.Click, {
-          click: toDocumentFraction(click.pageX, click.pageY),
+          values: [{ click: toDocumentFraction(click.pageX, click.pageY) }],
         });
       },
     },

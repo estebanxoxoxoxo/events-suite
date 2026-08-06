@@ -29,8 +29,7 @@ export const startSkimScroll = (cfg: SkimScrollConfig = config) =>
           gesture.scrollDepth < cfg.fullSweepToDepth;
         if (gesture.deltaPx > cfg.minPx && !fullSweep) {
           gateway.emit(BehaviorEventNames.SkimScroll, {
-            delta_px: gesture.deltaPx,
-            direction: gesture.direction,
+            values: [{ delta_px: gesture.deltaPx }, { direction: gesture.direction }],
           });
         }
       },
