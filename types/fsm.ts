@@ -62,8 +62,8 @@ export interface BounceConfig {
   maxSeconds: number;
 }
 
-/** Total de clicks: al terminar la sesión emite el acumulado. */
-export interface TotalClicksConfig {
+/** Click: al terminar la sesión emite el total y el mapa de coordenadas. */
+export interface ClickConfig {
   /** Solo emite si el total llegó a esto (0 = emitir siempre). */
   minClicks: number;
 }

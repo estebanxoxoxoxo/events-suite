@@ -15,7 +15,7 @@ import { startSkimScroll } from "./1-detection/FSMs/skimScroll";
 import { startDiagonalScroll } from "./1-detection/FSMs/diagonalScroll";
 import { startToTopScroll } from "./1-detection/FSMs/toTopScroll";
 import { startBounce } from "./1-detection/FSMs/bounce";
-import { startTotalClicks } from "./1-detection/FSMs/totalClicks";
+import { startClick } from "./1-detection/FSMs/click";
 import { startRageClick } from "./1-detection/FSMs/rageClick";
 import { startComponentFocus } from "./1-detection/FSMs/componentFocus";
 
@@ -47,7 +47,7 @@ export function initEventsSuite(): () => void {
     startDiagonalScroll(),
     startToTopScroll(),
     startBounce(),
-    startTotalClicks(),
+    startClick(),
     startRageClick(),
     startComponentFocus(),
   ];

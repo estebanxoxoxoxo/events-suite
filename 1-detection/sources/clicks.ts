@@ -9,7 +9,14 @@ const emitter = createEmitter<ClickData>();
 let listening = false;
 
 function onClick(event: MouseEvent) {
-  emitter.emit({ x: event.clientX, y: event.clientY, timestamp: Date.now() });
+  emitter.emit({
+    x: event.clientX,
+    y: event.clientY,
+    // pageX/pageY las da el navegador ya sumadas al scroll
+    pageX: Math.round(event.pageX),
+    pageY: Math.round(event.pageY),
+    timestamp: Date.now(),
+  });
 }
 
 export const clicks = {

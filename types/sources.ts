@@ -25,10 +25,16 @@ export interface ScrollGesture {
   timestamp: number;
 }
 
-/** Un click crudo. */
+/** Un click crudo, con las dos coordenadas que hacen falta:
+ * - x/y: relativas al VIEWPORT (dónde en la pantalla). Es lo que mira
+ *   rage_click, porque la ráfaga se juzga por cercanía en pantalla.
+ * - pageX/pageY: relativas al DOCUMENTO. Son las del mapa de clicks: el mismo
+ *   botón clickeado con distinto scroll da el mismo punto. */
 export interface ClickData {
   x: number;
   y: number;
+  pageX: number;
+  pageY: number;
   /** Epoch ms. */
   timestamp: number;
 }

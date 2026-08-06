@@ -94,7 +94,7 @@ Propiedades de esa dinámica, todas deliberadas:
 - **`event_id` es el mismo id en los tres sistemas**: dedup de la capa plata en bronze, `eventID` del pixel y de la CAPI de Meta. Un solo identificador correlaciona todo. **No confundirlo con el `message_id` de la raíz del evento en bronze**: ese lo genera el SDK de RudderStack al despachar e identifica el *mensaje*, así que cambia si el evento esperó en cola. `event_id` identifica la *ocurrencia* y se estampa cuando pasó.
 - **`original_timestamp` es la ocurrencia REAL**: el pusher lo pasa por evento al SDK (`ApiOptions.originalTimestamp` = el timestamp del envelope), así que lo que esperó en cola (pre-SDK o backfill gateado por consentimiento) no hereda la hora del despacho. Semántica estándar, cero columnas extra.
 - **El gateway es estricto en compilación**: solo nombres del catálogo con su payload exacto; y desde la app, `pushBusinessEvent` solo acepta eventos de negocio.
-- **Eventos de cierre** (`bounce`, `total_clicks`) se emiten en `pagehide`. Caveat conocido: el SDK de RudderStack flushea cada 3 s sin beacon, así que si la pestaña se cierra justo, quedan persistidos en localStorage y salen en la próxima visita (no se pierden, llegan tarde).
+- **Eventos de cierre** (`bounce`, `click`) se emiten en `pagehide`. Caveat conocido: el SDK de RudderStack flushea cada 3 s sin beacon, así que si la pestaña se cierra justo, quedan persistidos en localStorage y salen en la próxima visita (no se pierden, llegan tarde).
 - **En dev (Vite), editar la suite fuerza recarga completa**: los singletons no sobreviven un hot-swap parcial sin mezclar instancias viejas y nuevas.
 - **El tracking nunca rompe la página**: todo el camino de despacho está envuelto en try/catch; un pusher roto no frena a los demás.
 
@@ -154,7 +154,7 @@ Cada FSM vive en su archivo con su objeto `config` arriba de todo — **la fuent
 | `diagonalScroll.ts` | `diagonal_scroll` | 1×/ocasión | 2 gestos de 300–2501 px en < 20 s |
 | `toTopScroll.ts` | `to_top_scroll` | 1×/ocasión | un gesto ↑ que sale de depth > 80 % y aterriza en < 20 % (sin umbral de px) |
 | `bounce.ts` | `bounce` | 1×/sesión | la sesión termina (pagehide) antes de 5 s **de atención** |
-| `totalClicks.ts` | `total_clicks` | 1×/sesión | al cierre de sesión emite el total acumulado |
+| `click.ts` | `click` | 1×/sesión | al cierre de sesión emite el total y el mapa de coordenadas |
 | `rageClick.ts` | `rage_click` | 1×/ocasión | ráfaga (asentada tras 200 ms) con ≥3 clicks en 600 ms |
 | `componentFocus.ts` | `component_focus` | 1×/ocasión | llegó por scroll a un componente etiquetado, dwell de 4–20 s, y scrolleó a otra parte |
 
@@ -202,7 +202,7 @@ Tres reglas:
 | `skim_scroll` | `delta_px` | `direction` |
 | `to_top_scroll` | `delta_px`, `from_depth`, `to_depth` | — |
 | `bounce` | `engaged_seconds` | — |
-| `total_clicks` | `clicks` | — |
+| `click` | `clicks` | `coordinates[]` |
 | `rage_click` | `clicks`, `span_ms`, `x`, `y` | — |
 | `component_focus` | `dwell_seconds` | `component`, `entered_from`, `exited_to` |
 

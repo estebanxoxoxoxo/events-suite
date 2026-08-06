@@ -14,7 +14,7 @@ export enum BehaviorEventNames {
   ToTopScroll = "to_top_scroll",
   DiagonalScroll = "diagonal_scroll",
   Bounce = "bounce",
-  TotalClicks = "total_clicks",
+  Click = "click",
   RageClick = "rage_click",
   ComponentFocus = "component_focus",
 }
@@ -44,7 +44,12 @@ export interface BehaviorEvents {
   };
   [BehaviorEventNames.DiagonalScroll]: { values: EventValue<ScrollStreakValue>[] };
   [BehaviorEventNames.Bounce]: { values: EventValue<"engaged_seconds">[] };
-  [BehaviorEventNames.TotalClicks]: { values: EventValue<"clicks">[] };
+  [BehaviorEventNames.Click]: {
+    values: EventValue<"clicks">[];
+    /** Uno por click, en orden. Coordenadas del DOCUMENTO (no del viewport):
+     * son las que ubican el click en la página sin importar el scroll. */
+    coordinates: ClickPoint[];
+  };
   [BehaviorEventNames.RageClick]: {
     values: EventValue<"clicks" | "span_ms" | "x" | "y">[];
   };
@@ -59,6 +64,13 @@ export interface BehaviorEvents {
 /** Los deltas individuales de la racha se resumen: un array adentro de `value`
  * no lo desanida cómodo ningún motor, y lo que se consulta es el agregado. */
 type ScrollStreakValue = "gestures" | "total_px" | "span_seconds";
+
+/** Un punto del mapa de clicks. Va FUERA de `values` porque una coordenada es
+ * un par, y `value` es siempre un número suelto. */
+export interface ClickPoint {
+  x: number;
+  y: number;
+}
 
 // ── Negocio (app → gateway) ──────────────────────────────────────────
 
