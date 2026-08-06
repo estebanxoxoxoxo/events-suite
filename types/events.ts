@@ -44,11 +44,10 @@ export interface BehaviorEvents {
   };
   [BehaviorEventNames.DiagonalScroll]: { values: EventValue<ScrollStreakValue>[] };
   [BehaviorEventNames.Bounce]: { values: EventValue<"engaged_seconds">[] };
-  /** Un click, un evento. Una sola entrada, y su clave es `values` en plural
-   * porque son dos números, no uno: el par `[x, y]` en coordenadas del
+  /** Un click, un evento. Un solo value: el par `[x, y]` en coordenadas del
    * DOCUMENTO (no del viewport), que ubican el click en la página sin importar
    * el scroll. La tupla obliga a que sea exactamente esa entrada. */
-  [BehaviorEventNames.Click]: { values: [ClickValue] };
+  [BehaviorEventNames.Click]: { values: [EventValue<"click", ClickPoint>] };
   [BehaviorEventNames.RageClick]: {
     values: EventValue<"clicks" | "span_ms" | "x" | "y">[];
   };
@@ -64,15 +63,9 @@ export interface BehaviorEvents {
  * no lo desanida cómodo ningún motor, y lo que se consulta es el agregado. */
 type ScrollStreakValue = "gestures" | "total_px" | "span_seconds";
 
-/** Coordenada de un click: `[x, y]`. */
+/** Coordenada de un click: `[x, y]`. Es el único `value` que no es un número
+ * suelto — `values` sigue siendo siempre la lista de entradas `{name, value}`. */
 export type ClickPoint = [number, number];
-
-/** La entrada del evento click. Rompe a propósito con `EventValue`: ahí `value`
- * es un número suelto, y acá son dos. */
-export interface ClickValue {
-  name: "click";
-  values: ClickPoint;
-}
 
 // ── Negocio (app → gateway) ──────────────────────────────────────────
 

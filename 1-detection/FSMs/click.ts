@@ -21,7 +21,7 @@ export const startClick = () =>
     states: {
       watching(click) {
         gateway.emit(BehaviorEventNames.Click, {
-          values: [{ name: "click", values: [click.pageX, click.pageY] }],
+          values: [{ name: "click", value: [click.pageX, click.pageY] }],
         });
       },
     },
