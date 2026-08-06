@@ -9,7 +9,10 @@ import { clicks } from "./1-detection/sources/clicks";
 import { focusedComponent } from "./1-detection/sources/focusedComponent";
 import { startRelevantSession } from "./1-detection/FSMs/relevantSession";
 import { startActiveSession } from "./1-detection/FSMs/activeSession";
-import { startScrollDepth } from "./1-detection/FSMs/scrollDepth";
+import { startScroll25 } from "./1-detection/FSMs/scroll25";
+import { startScroll50 } from "./1-detection/FSMs/scroll50";
+import { startScroll75 } from "./1-detection/FSMs/scroll75";
+import { startScroll90 } from "./1-detection/FSMs/scroll90";
 import { startReadingScroll } from "./1-detection/FSMs/readingScroll";
 import { startSkimScroll } from "./1-detection/FSMs/skimScroll";
 import { startDiagonalScroll } from "./1-detection/FSMs/diagonalScroll";
@@ -41,7 +44,10 @@ export function initEventsSuite(): () => void {
   const fsms = [
     startRelevantSession(),
     startActiveSession(),
-    startScrollDepth(),
+    startScroll25(),
+    startScroll50(),
+    startScroll75(),
+    startScroll90(),
     startReadingScroll(),
     startSkimScroll(),
     startDiagonalScroll(),

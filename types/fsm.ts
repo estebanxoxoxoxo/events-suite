@@ -22,10 +22,7 @@ export interface RelevantSessionConfig {
   minEvents: EventCountRule[];
 }
 
-export interface ScrollDepthConfig {
-  /** Porcentajes (0..100); cada nivel dispara una única vez. */
-  levels: number[];
-}
+/* scroll25/50/75/90 no tienen config: el umbral es el nombre de cada máquina. */
 
 /** Racha: `count` gestos consecutivos dentro del rango de px, en menos de `windowSeconds`. */
 export interface ScrollStreakConfig {

@@ -8,7 +8,10 @@ import type { GeneralInfo, ScrollDirection } from "./sources";
 export enum BehaviorEventNames {
   RelevantSession = "relevant_session",
   ActiveSession = "active_session",
-  DepthScroll = "depth_scroll",
+  Scroll25 = "scroll_25",
+  Scroll50 = "scroll_50",
+  Scroll75 = "scroll_75",
+  Scroll90 = "scroll_90",
   ReadingScroll = "reading_scroll",
   SkimScroll = "skim_scroll",
   ToTopScroll = "to_top_scroll",
@@ -29,7 +32,12 @@ export interface BehaviorEvents {
     engaged_seconds: number;
   } & Partial<Record<`count_${BehaviorEventNames}`, number>>;
   [BehaviorEventNames.ActiveSession]: { engaged_seconds: number; scroll_depth: number };
-  [BehaviorEventNames.DepthScroll]: { level: number; scroll_depth: number };
+  /** El umbral está en el nombre del evento, así que el payload no lo repite:
+   * lleva CUÁNTO TARDÓ en llegar, que es lo que el nombre no dice. */
+  [BehaviorEventNames.Scroll25]: ScrollMilestone;
+  [BehaviorEventNames.Scroll50]: ScrollMilestone;
+  [BehaviorEventNames.Scroll75]: ScrollMilestone;
+  [BehaviorEventNames.Scroll90]: ScrollMilestone;
   [BehaviorEventNames.ReadingScroll]: ScrollStreak;
   [BehaviorEventNames.SkimScroll]: { delta_px: number; direction: ScrollDirection };
   [BehaviorEventNames.ToTopScroll]: { delta_px: number; from_depth: number; to_depth: number };
@@ -47,6 +55,11 @@ export interface BehaviorEvents {
     entered_from?: ScrollDirection;
     exited_to?: ScrollDirection;
   };
+}
+
+/** Hito de profundidad: segundos de atención hasta cruzarlo. */
+interface ScrollMilestone {
+  engaged_seconds: number;
 }
 
 /** Racha de gestos: cuántos, el detalle px de cada uno en orden, y cuánto duró.

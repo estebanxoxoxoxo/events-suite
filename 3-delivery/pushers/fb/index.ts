@@ -3,7 +3,7 @@
 // con el MISMO eventID → Meta deduplica). El mapping default es conservador a
 // propósito: Lead NO está porque ya lo dispara startRegisterAttempt con
 // eventId = attemptId — mapearlo acá contaría conversiones dobles. Y solo
-// eventos de negocio: a Meta van conversiones, no 47 depth_scroll.
+// eventos de negocio: a Meta van conversiones, no 47 scrolls.
 
 import { registerDispatcher } from "../../channel";
 import { sessionMetadata } from "../../adapters/metadata";
