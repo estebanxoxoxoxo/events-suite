@@ -1,47 +1,29 @@
-// FSM «Click» — 1 vez por sesión: acumula los clicks y, al terminar la sesión
-// (pagehide, igual que bounce), emite el total y el mapa de dónde ocurrieron.
+// FSM «Click» — 1 vez por click: emite dónde ocurrió, ni bien ocurre.
 //
 // Las coordenadas son las del DOCUMENTO, no las del viewport: así un click en
-// el mismo botón cae siempre en el mismo punto, haya scrolleado o no.
+// el mismo botón cae siempre en el mismo punto, haya scrolleado o no. Las de
+// pantalla quedan para rageClick, que juzga cercanía en el monitor.
+//
+// Sin config y sin estado terminal: vive toda la sesión. Al no depender de
+// `pagehide` —como sí hacen bounce y las máquinas de cierre— tampoco arrastra
+// el caveat de quedar encolado hasta la visita siguiente.
 
-import { createFSM, DONE } from "./createFSM";
+import { createFSM } from "./createFSM";
 import { gateway } from "../../2-gateway";
 import { clicks } from "../sources/clicks";
-import { BehaviorEventNames, type ClickConfig, type ClickPoint } from "../../types";
+import { BehaviorEventNames, type ClickData } from "../../types";
 
-const config: ClickConfig = {
-  minClicks: 0,
-};
-
-type Input = { click: ClickPoint } | { sessionEnd: true };
-type Ctx = { points: ClickPoint[] };
-
-export const startClick = (cfg: ClickConfig = config) =>
-  createFSM<Input, Ctx>({
+export const startClick = () =>
+  createFSM<ClickData, Record<string, never>>({
     id: "click",
     initial: "watching",
-    context: { points: [] },
+    context: {},
     states: {
-      watching(input, ctx) {
-        if ("click" in input) {
-          ctx.points.push(input.click);
-          return;
-        }
-        if (ctx.points.length >= cfg.minClicks) {
-          gateway.emit(BehaviorEventNames.Click, {
-            values: [{ name: "clicks", value: ctx.points.length }],
-            coordinates: ctx.points,
-          });
-        }
-        return DONE;
+      watching(click) {
+        gateway.emit(BehaviorEventNames.Click, {
+          values: [{ name: "click", values: [click.pageX, click.pageY] }],
+        });
       },
     },
-    wire: send => {
-      const onEnd = () => send({ sessionEnd: true });
-      window.addEventListener("pagehide", onEnd);
-      return [
-        clicks.subscribe(click => send({ click: { x: click.pageX, y: click.pageY } })),
-        () => window.removeEventListener("pagehide", onEnd),
-      ];
-    },
+    wire: send => [clicks.subscribe(send)],
   });

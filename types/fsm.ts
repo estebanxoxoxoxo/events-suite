@@ -62,11 +62,7 @@ export interface BounceConfig {
   maxSeconds: number;
 }
 
-/** Click: al terminar la sesión emite el total y el mapa de coordenadas. */
-export interface ClickConfig {
-  /** Solo emite si el total llegó a esto (0 = emitir siempre). */
-  minClicks: number;
-}
+/* click no tiene config: un click, un evento — no hay umbral que ajustar. */
 
 /** Rage click: ráfaga (asentada tras `debounceMs` sin clicks) con alguna ventana de `windowMs` conteniendo `count` o más. */
 export interface RageClickConfig {

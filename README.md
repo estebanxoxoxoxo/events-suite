@@ -187,7 +187,7 @@ Dominancia relativa al viewport (IntersectionObserver, sin coordenadas); el valo
 
 Tres reglas:
 
-- **Solo métricas numéricas.** `value` es siempre `number`, así que silver no castea.
+- **`value` es numérico**, con una excepción: `click.coordinates` lleva el array de puntos `{x, y}` del mapa de clicks.
 - **Lo categórico queda afuera.** `component`, `direction`, `entered_from`, `exited_to` viajan como propiedad suelta al lado de `values`: son con lo que agrupás, no lo que medís, y adentro del array obligarían a desanidar para filtrar.
 - **Nada de arrays adentro de `value`.** Las rachas (`reading_scroll`, `diagonal_scroll`) resumen sus deltas en `gestures`, `total_px` y `span_seconds`.
 
@@ -202,7 +202,7 @@ Tres reglas:
 | `skim_scroll` | `delta_px` | `direction` |
 | `to_top_scroll` | `delta_px`, `from_depth`, `to_depth` | — |
 | `bounce` | `engaged_seconds` | — |
-| `click` | `clicks` | `coordinates[]` |
+| `click` | `clicks`, `coordinates` | — |
 | `rage_click` | `clicks`, `span_ms`, `x`, `y` | — |
 | `component_focus` | `dwell_seconds` | `component`, `entered_from`, `exited_to` |
 

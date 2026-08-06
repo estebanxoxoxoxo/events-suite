@@ -23,9 +23,9 @@ export enum BehaviorEventNames {
  * que silver los desanide sin conocer el esquema de cada evento. Solo métricas:
  * lo categórico (`component`, `direction`) viaja como propiedad suelta, porque
  * es con lo que agrupás, no lo que medís. */
-export interface EventValue<N extends string = string> {
+export interface EventValue<N extends string = string, V = number> {
   name: N;
-  value: number;
+  value: V;
 }
 
 export interface BehaviorEvents {
@@ -44,12 +44,11 @@ export interface BehaviorEvents {
   };
   [BehaviorEventNames.DiagonalScroll]: { values: EventValue<ScrollStreakValue>[] };
   [BehaviorEventNames.Bounce]: { values: EventValue<"engaged_seconds">[] };
-  [BehaviorEventNames.Click]: {
-    values: EventValue<"clicks">[];
-    /** Uno por click, en orden. Coordenadas del DOCUMENTO (no del viewport):
-     * son las que ubican el click en la página sin importar el scroll. */
-    coordinates: ClickPoint[];
-  };
+  /** Un click, un evento. Una sola entrada, y su clave es `values` en plural
+   * porque son dos números, no uno: el par `[x, y]` en coordenadas del
+   * DOCUMENTO (no del viewport), que ubican el click en la página sin importar
+   * el scroll. La tupla obliga a que sea exactamente esa entrada. */
+  [BehaviorEventNames.Click]: { values: [ClickValue] };
   [BehaviorEventNames.RageClick]: {
     values: EventValue<"clicks" | "span_ms" | "x" | "y">[];
   };
@@ -65,11 +64,14 @@ export interface BehaviorEvents {
  * no lo desanida cómodo ningún motor, y lo que se consulta es el agregado. */
 type ScrollStreakValue = "gestures" | "total_px" | "span_seconds";
 
-/** Un punto del mapa de clicks. Va FUERA de `values` porque una coordenada es
- * un par, y `value` es siempre un número suelto. */
-export interface ClickPoint {
-  x: number;
-  y: number;
+/** Coordenada de un click: `[x, y]`. */
+export type ClickPoint = [number, number];
+
+/** La entrada del evento click. Rompe a propósito con `EventValue`: ahí `value`
+ * es un número suelto, y acá son dos. */
+export interface ClickValue {
+  name: "click";
+  values: ClickPoint;
 }
 
 // ── Negocio (app → gateway) ──────────────────────────────────────────
