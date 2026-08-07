@@ -87,10 +87,13 @@ interface ToTopScrollValues {
   to_depth: number;
 }
 
-/** Un click, un evento: `[x, y]` como FRACCIÓN del documento (0..1), no en
- * píxeles — así el mismo punto significa lo mismo en mobile y en desktop. */
+/** Un click, un evento: `x`/`y` como FRACCIÓN del documento (0..1), no en
+ * píxeles — así el mismo punto significa lo mismo en mobile y en desktop.
+ * Escalares separados, como en rage_click: cada medición es una punta simple
+ * y aguas abajo se vuelve una columna propia. */
 interface ClickValues {
-  click: ClickPoint;
+  x: number;
+  y: number;
 }
 
 /** `quantity` = clicks de la ráfaga, mismo nombre que en las rachas. `x`/`y`
@@ -108,9 +111,6 @@ interface ComponentFocusValues {
   entered_from?: ScrollDirection;
   exited_to?: ScrollDirection;
 }
-
-/** Posición de un click: `[x, y]` como fracción del ancho y alto del documento. */
-export type ClickPoint = [number, number];
 
 // ── Negocio (app → gateway) ──────────────────────────────────────────
 

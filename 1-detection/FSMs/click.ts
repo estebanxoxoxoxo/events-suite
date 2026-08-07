@@ -22,8 +22,12 @@ export const startClick = () =>
     context: {},
     states: {
       watching(click) {
+        // x/y como escalares separados, igual que rage_click: aguas abajo
+        // cada medición es una columna propia, y una tupla empaquetada bajo
+        // una sola clave no puede serlo.
+        const [x, y] = toDocumentFraction(click.pageX, click.pageY);
         gateway.emit(BehaviorEventNames.Click, {
-          values: [{ click: toDocumentFraction(click.pageX, click.pageY) }],
+          values: [{ x }, { y }],
         });
       },
     },
