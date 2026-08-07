@@ -24,35 +24,31 @@ export interface RelevantSessionConfig {
 
 /* scroll25/50/75/90 no tienen config: el umbral es el nombre de cada máquina. */
 
-/** Racha: `count` gestos consecutivos dentro del rango de px, en menos de `windowSeconds`. */
+/** Racha: gestos consecutivos dentro del rango de px. Acumula mientras sigan
+ * calificando y emite UNA vez al cortarse, con la cantidad real — por eso es un
+ * mínimo y no un número exacto. Se corta con un gesto que no califica, con
+ * `maxGapSeconds` de silencio, o al terminar la sesión. */
 export interface ScrollStreakConfig {
-  count: number;
-  windowSeconds: number;
-  /** Cada gesto debe medir más que esto (si se define). */
+  /** No emite si la racha no llegó a esto. */
+  minCount: number;
+  /** Silencio máximo entre gestos antes de dar la racha por cerrada. */
+  maxGapSeconds: number;
+  /** Rango INCLUSIVO de cada gesto. Los rangos de reading/diagonal/skim son
+   * adyacentes y no se pisan: cada gesto cae en exactamente un balde. */
   minPx?: number;
-  /** Cada gesto debe medir menos que esto (si se define). */
   maxPx?: number;
 }
 
 /** Scroll despectivo: un solo gesto que supere `minPx`. Hacia arriba, todos
- * menos la barrida completa al tope, que es territorio de toTopScroll. */
+ * menos la barrida completa al tope, que es territorio de toTopScroll — esa
+ * frontera es única y vive en `lib/fullSweep.ts`. */
 export interface SkimScrollConfig {
   minPx: number;
-  /** 0..1: los mismos umbrales de ToTopScrollConfig — lo que skim le CEDE.
-   * Duplicados a propósito: ninguna FSM importa de otra. Mantener en sync. */
-  fullSweepFromDepth: number;
-  fullSweepToDepth: number;
 }
 
-/** Vuelta al tope: un solo gesto que sale de profundidad > `minFromDepth` y
- * aterriza en < `maxToDepth`. Sin umbral de px: se define por recorrido, así
- * escala solo entre mobile y desktop. */
-export interface ToTopScrollConfig {
-  /** 0..1: profundidad en la que estaba el usuario antes del gesto. */
-  minFromDepth: number;
-  /** 0..1: profundidad a la que llega. */
-  maxToDepth: number;
-}
+/* to_top_scroll no tiene config: su definición ES la frontera compartida de
+ * `lib/fullSweep.ts`, y se define por recorrido y no por píxeles, así que
+ * escala sola entre mobile y desktop. */
 
 /** Bounce: la sesión termina antes de `maxSeconds`. */
 export interface BounceConfig {

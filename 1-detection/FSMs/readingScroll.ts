@@ -1,48 +1,82 @@
-// FSM «Scroll de lectura» — 1 vez por ocasión: racha de gestos cortos
-// compatible con lectura. Un gesto fuera de rango corta la racha.
+// FSM «Lectura» — 1 vez por racha: gestos cortos y consecutivos, compatibles
+// con leer de corrido. `minCount` es un MÍNIMO, no un número exacto: la racha
+// acumula mientras los gestos sigan calificando y emite una sola vez al
+// cortarse, con la cantidad real. Siete tramos leídos seguidos son un evento de
+// siete, no dos de tres.
+//
+// Se corta de tres formas: llega un gesto que no califica, pasan maxGapSeconds
+// sin ninguno, o termina la sesión. Sin esas dos últimas, la racha final —la
+// del que leyó hasta el fondo y se fue— quedaría colgada para siempre.
 
 import { createFSM } from "./createFSM";
 import { gateway } from "../../2-gateway";
 import { scrollYData } from "../sources/scrollYData";
+import { isFullSweepToTop } from "../../lib/fullSweep";
 import { BehaviorEventNames, type ScrollGesture, type ScrollStreakConfig } from "../../types";
 
 const config: ScrollStreakConfig = {
-  count: 3,
-  windowSeconds: 20,
-  maxPx: 301,
+  minCount: 3,
+  maxGapSeconds: 20,
+  maxPx: 300,
 };
 
-type Ctx = { streak: { px: number; at: number }[] };
+type Input = { gesture: ScrollGesture } | { closed: true };
+type Ctx = { streak: number[]; startedAt: number; lastAt: number };
 
-const inRange = (px: number, { minPx = 0, maxPx = Infinity }: ScrollStreakConfig) =>
-  px > minPx && px < maxPx;
+const qualifies = (gesture: ScrollGesture, cfg: ScrollStreakConfig) =>
+  !isFullSweepToTop(gesture) && // la vuelta al tope no es lectura
+  gesture.deltaPx >= (cfg.minPx ?? 0) &&
+  gesture.deltaPx <= (cfg.maxPx ?? Infinity);
 
 export const startReadingScroll = (cfg: ScrollStreakConfig = config) =>
-  createFSM<ScrollGesture, Ctx>({
+  createFSM<Input, Ctx>({
     id: "readingScroll",
     initial: "watching",
-    context: { streak: [] },
+    context: { streak: [], startedAt: 0, lastAt: 0 },
     states: {
-      watching(gesture, ctx) {
-        if (!inRange(gesture.deltaPx, cfg)) {
+      watching(input, ctx) {
+        const close = () => {
+          if (ctx.streak.length >= cfg.minCount) {
+            gateway.emit(BehaviorEventNames.ReadingScroll, {
+              values: [
+                { quantity: ctx.streak.length },
+                // el px de cada gesto, en orden: el total es su suma
+                { gestures: [...ctx.streak] },
+                { span_seconds: +((ctx.lastAt - ctx.startedAt) / 1000).toFixed(3) },
+              ],
+            });
+          }
           ctx.streak = [];
+        };
+
+        if ("closed" in input) {
+          close();
           return;
         }
-        const windowMs = cfg.windowSeconds * 1000;
-        ctx.streak = [...ctx.streak, { px: gesture.deltaPx, at: gesture.timestamp }].filter(
-          s => gesture.timestamp - s.at < windowMs,
-        );
-        if (ctx.streak.length < cfg.count) return;
-        gateway.emit(BehaviorEventNames.ReadingScroll, {
-          values: [
-            { quantity: ctx.streak.length },
-            // el detalle px de cada gesto, en orden: el total es su suma
-            { gestures: ctx.streak.map(s => Math.round(s.px)) },
-            { span_seconds: (gesture.timestamp - ctx.streak[0].at) / 1000 },
-          ],
-        });
-        ctx.streak = []; // re-arma: la próxima ocasión necesita gestos nuevos
+        if (!qualifies(input.gesture, cfg)) {
+          close(); // el gesto que rompe la racha la cierra
+          return;
+        }
+        if (ctx.streak.length === 0) ctx.startedAt = input.gesture.timestamp;
+        ctx.lastAt = input.gesture.timestamp;
+        ctx.streak.push(Math.round(input.gesture.deltaPx));
       },
     },
-    wire: send => [scrollYData.subscribe(send)],
+    wire: send => {
+      // el temporizador vive acá, como en rageClick: cada gesto lo reinicia
+      let timer: ReturnType<typeof setTimeout> | null = null;
+      const onEnd = () => send({ closed: true });
+      window.addEventListener("pagehide", onEnd);
+      return [
+        scrollYData.subscribe(gesture => {
+          send({ gesture });
+          if (timer) clearTimeout(timer);
+          timer = setTimeout(onEnd, cfg.maxGapSeconds * 1000);
+        }),
+        () => {
+          if (timer) clearTimeout(timer);
+          window.removeEventListener("pagehide", onEnd);
+        },
+      ];
+    },
   });

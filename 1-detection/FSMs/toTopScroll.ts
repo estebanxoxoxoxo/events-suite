@@ -1,31 +1,26 @@
 // FSM «Vuelta al tope» — 1 vez por ocasión: barrida completa al tope en UN
-// gesto: sale de profundo (> minFromDepth) y aterriza arriba (< maxToDepth).
-// Sin umbral de píxeles: el recorrido ya implica un gesto largo, y en
-// proporción de página significa lo mismo en mobile que en desktop. Las dos
-// profundidades vienen en el propio gesto (source scrollYData).
+// gesto. Su definición ES la frontera compartida de `lib/fullSweep.ts`: sale de
+// profundo y aterriza arriba. Sin umbral de píxeles y sin config propia — el
+// recorrido ya implica un gesto largo, y en proporción de página significa lo
+// mismo en mobile que en desktop.
+//
+// skim, reading y diagonal ceden estos gestos: entre las cuatro, ninguno queda
+// sin clasificar ni se cuenta dos veces.
 
 import { createFSM } from "./createFSM";
 import { gateway } from "../../2-gateway";
 import { scrollYData } from "../sources/scrollYData";
-import { BehaviorEventNames, type ScrollGesture, type ToTopScrollConfig } from "../../types";
+import { isFullSweepToTop } from "../../lib/fullSweep";
+import { BehaviorEventNames, type ScrollGesture } from "../../types";
 
-const config: ToTopScrollConfig = {
-  minFromDepth: 0.8,
-  maxToDepth: 0.2,
-};
-
-export const startToTopScroll = (cfg: ToTopScrollConfig = config) =>
+export const startToTopScroll = () =>
   createFSM<ScrollGesture, Record<string, never>>({
     id: "toTopScroll",
     initial: "watching",
     context: {},
     states: {
       watching(gesture) {
-        if (
-          gesture.direction === "up" &&
-          gesture.fromDepth > cfg.minFromDepth &&
-          gesture.scrollDepth < cfg.maxToDepth
-        ) {
+        if (isFullSweepToTop(gesture)) {
           gateway.emit(BehaviorEventNames.ToTopScroll, {
             values: [
               { delta_px: gesture.deltaPx },
