@@ -10,7 +10,7 @@
 // nodo) y factura por tráfico, no por operación.
 //
 // El SDK de Firebase entra por import dinámico en idle: la landing no paga su
-// peso en el LCP. `firebase` ya es dependencia del repo (registro con Google).
+// peso en el LCP. `firebase` ya es dependencia del repo (registro con Google). //
 
 import { registerDispatcher } from "../channel";
 import { sessionMetadata } from "../adapters/metadata";
