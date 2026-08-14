@@ -8,13 +8,16 @@
     "publish:event-types": "node scripts/publish-event-types.mjs",
     "copy:api": "cp -r ./api ../api/"
   },
+  "//": "PEER y no dependencies a propósito: la suite se consume como FUENTE, y el bundler del host resuelve estos paquetes subiendo desde el archivo que los importa. Si la suite tuviera su propio node_modules, habría dos copias de cada uno en el bundle — y con react eso no es peso de más sino rotura: el Provider crearía su contexto con una copia y el hook lo leería desde la otra.",
   "peerDependencies": {
     "@rudderstack/analytics-js": "^3",
     "firebase": "^12",
+    "firebase-admin": "^13",
     "react": ">=18"
   },
   "peerDependenciesMeta": {
     "@rudderstack/analytics-js": { "optional": true },
-    "firebase": { "optional": true }
+    "firebase": { "optional": true },
+    "firebase-admin": { "optional": true }
   }
 }
