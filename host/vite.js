@@ -30,12 +30,17 @@ const DEFAULT_INGEST = 'https://actasitalianasexpress.com'
 
 // Lo que devuelve el mock de /api/get-vercel-session-metadata en dev: en prod
 // eso son los headers del edge (x-vercel-ip-*), que en localhost no existen.
+// Tiene que traer las MISMAS claves que el endpoint real: si el mock trae
+// menos, en dev no ves algo que en prod sí viaja (pasó con latitude/longitude).
 const DEV_SESSION_METADATA = {
   supplier: 'dev',
   ip: '127.0.0.1',
   country: 'DEV',
   region: 'DEV',
   city: 'localhost',
+  postal_code: '00000',
+  latitude: '40.4345',
+  longitude: '-3.8244',
   timezone: 'America/Argentina/Buenos_Aires',
 }
 

@@ -5,7 +5,8 @@
   "type": "module",
   "description": "Analítica de comportamiento y de negocio para el navegador: detección (sources + FSMs) → gateway → delivery (pipeline propio estilo RudderStack + Meta pixel/CAPI). Se consume como submódulo de git, en TypeScript, sin build propio.",
   "scripts": {
-    "publish:event-types": "node scripts/publish-event-types.mjs"
+    "publish:event-types": "node scripts/publish-event-types.mjs",
+    "copy:api": "cp -r ./api ../api/"
   },
   "peerDependencies": {
     "@rudderstack/analytics-js": "^3",
