@@ -6,7 +6,8 @@
   "description": "Analítica de comportamiento y de negocio para el navegador: detección (sources + FSMs) → gateway → delivery (pipeline propio estilo RudderStack + Meta pixel/CAPI). Se consume como submódulo de git, en TypeScript, sin build propio.",
   "scripts": {
     "publish:event-types": "node scripts/publish-event-types.mjs",
-    "copy:api": "cp -r ./api ../api/"
+    "copy:api": "cp -r ./api ../api/",
+    "write:gitmodules": "node scripts/write-gitmodules.mjs"
   },
   "//": "PEER y no dependencies a propósito: la suite se consume como FUENTE, y el bundler del host resuelve estos paquetes subiendo desde el archivo que los importa. Si la suite tuviera su propio node_modules, habría dos copias de cada uno en el bundle — y con react eso no es peso de más sino rotura: el Provider crearía su contexto con una copia y el hook lo leería desde la otra.",
   "peerDependencies": {
