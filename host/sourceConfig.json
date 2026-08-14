@@ -1,0 +1,19 @@
+{
+  "isHosted": true,
+  "source": {
+    "id": "__SOURCE_NAME__",
+    "name": "__SOURCE_NAME__",
+    "writeKey": "__WRITE_KEY__",
+    "enabled": true,
+    "workspaceId": "__WORKSPACE__",
+    "updatedAt": "2026-07-30T00:00:00.000Z",
+    "config": {
+      "statsCollection": {
+        "errors": { "enabled": false },
+        "metrics": { "enabled": false }
+      }
+    },
+    "destinations": []
+  },
+  "updatedAt": "2026-07-30T00:00:00.000Z"
+}

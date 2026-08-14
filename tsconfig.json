@@ -11,5 +11,15 @@
     "isolatedModules": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["**/*.ts", "**/*.tsx"]
+  // Solo el código de navegador. `api/` son funciones serverless de Node (otro
+  // runtime, otras deps: firebase-admin, crypto) y las tipa el host que las sirva.
+  "include": [
+    "*.ts",
+    "*.tsx",
+    "1-detection/**/*",
+    "2-gateway/**/*",
+    "3-delivery/**/*",
+    "lib/**/*",
+    "types/**/*"
+  ]
 }

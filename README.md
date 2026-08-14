@@ -6,11 +6,32 @@ Sistema de analítica de **comportamiento** y de **negocio** para el navegador. 
 2. **Nuclear** — un gateway único que envuelve TODO evento (de las FSMs o de la app) en un envelope con contexto, `event_id` y timestamp.
 3. **Despachar** — delivery completa el payload (metadata de sesión: geo/IP del hosting, login, cookies de Meta) y lo transporta a los destinos: el pipeline propio (protocolo RudderStack → Vector → S3 raw/bronze) y las conversiones de Meta (pixel + CAPI).
 
-Se copia como carpeta a cualquier proyecto. El core es framework-free; el binding oficial es React (`EventsSuiteProvider`).
+Se enchufa como **submódulo de git** a cualquier proyecto. El core es framework-free; el binding oficial es React (`EventsSuiteProvider`).
+
+Este repo **es** la suite: la raíz es el código importable (`index.ts` y las tres etapas), y alrededor está lo que la suite necesita del mundo para funcionar.
+
+```
+index.ts · 1-detection/ · 2-gateway/ · 3-delivery/ · lib/ · types/   la suite (esto se importa)
+host/          el cableado que el host tiene que tener (plugin de Vite, rewrites, sourceConfig)
+api/           las funciones serverless que la suite consume
+infra/         el pipeline del otro lado del cable: Vector, S3, ops en CloudShell
+scripts/       publicación del catálogo de eventos al lake
+```
+
+No tiene build ni dependencias propias: se consume como fuente TypeScript y el bundler del host la compila con el resto de la app.
 
 ## Implementación en la app — paso a paso
 
-**1. Copiar.** `events-suite/` al proyecto + la plantilla [`eventsSuiteMirror-template`](./eventsSuiteMirror-template) a la app como `src/eventsSuiteMirror.tsx` (descomentarla y ajustar el path). Regla de oro: **el espejo es el único archivo de la app que importa de `events-suite`** — todo lo demás importa del espejo. Verificable con un grep.
+**1. Instalar como submódulo** — la carpeta tiene que llamarse `events-suite` para que el espejo de abajo resuelva sin tocar nada:
+
+```bash
+git submodule add <url-de-este-repo> events-suite
+git submodule update --init --recursive   # en cada clon del host
+```
+
+Y copiar la plantilla [`eventsSuiteMirror-template`](./eventsSuiteMirror-template) a la app como `src/eventsSuiteMirror.tsx` (descomentarla y ajustar el path). Regla de oro: **el espejo es el único archivo de la app que importa de `events-suite`** — todo lo demás importa del espejo. Verificable con un grep.
+
+Después, el cableado del host (una línea en `vite.config.js` + rewrites + funciones): [`host/README.md`](./host/README.md).
 
 **2. Montar el Provider en la raíz del árbol** — y solo en la rama que se quiere medir (en esta landing: `App`; las rutas `/placas` de ads quedan afuera a propósito):
 
@@ -115,6 +136,14 @@ Propiedades de esa dinámica, todas deliberadas:
 lib/           primitivas compartidas (emitter)
 types/         transversal: tipos de sources, FSMs, metadata y catálogo de eventos
 EventsSuiteProvider.tsx · init.ts (auto-init) · IncomingEventReader.tsx · index.ts (contrato)
+
+── afuera del código de navegador ──
+host/          cableado del host: vite.js (dataplane dev + sourceConfig al build) ·
+               vercel.json (rewrites de prod) · sourceConfig.json (plantilla)
+api/           funciones serverless: get-vercel-session-metadata (geo/IP del edge) ·
+               send-server-event (CAPI de Meta) · register · failed-lead · firebase-config
+infra/         el pipeline: Vector en EC2, capas raw/bronze en S3, ops por CloudShell
+scripts/       publish-event-types.mjs: sube el catálogo de eventos al lake
 ```
 
 **Reglas de fases — una sola vía (1 → 2 → 3)**:
@@ -246,10 +275,13 @@ Se escribe por hijo (`events/{event_id}`), así que agregar un evento no reescri
 
 ## Requisitos del host
 
+Todo esto viene resuelto en [`host/`](./host) y [`api/`](./api) — el host solo lo enchufa; el paso a paso está en [`host/README.md`](./host/README.md).
+
 - **React ≥ 18** (solo para el binding: Provider/hook/reader; el core no lo usa).
-- **RudderStack**: dependencia `@rudderstack/analytics-js` (import dinámico: solo carga si `startDelivery` la activa) + dataplane same-origin: `/sourceConfig` y `/v1/batch` servidos por el dominio (dev/preview: middleware y proxy en `vite.config.js`; prod: rewrites de `vercel.json`) + el `writeKey` que la app pasa en `startDelivery`.
-- **Meta**: snippet del pixel (`fbq`) en el HTML + la función `api/send-server-event.ts` (CAPI) con `META_PIXEL_ID` y `META_ACCESS_TOKEN` en las env del server — sin ellas la CAPI responde 500 y solo cuenta el pixel (degradación segura, sin dobles). `META_TEST_EVENT_CODE` solo para probar en Events Manager: vacío en producción. En dev, `vite.config.js` mockea el endpoint.
-- **Metadata del hosting**: la función `api/get-vercel-session-metadata.js` (echo de los headers del edge con `supplier: "vercel"`; en dev la mockea `vite.config.js`). En otro hosting, se reimplementa el endpoint con su `supplier` y la suite no cambia.
+- **RudderStack**: dependencia `@rudderstack/analytics-js` (import dinámico: solo carga si `startDelivery` la activa) + dataplane same-origin: `/sourceConfig` y `/v1/batch` servidos por el dominio (dev/preview y emisión del `sourceConfig.json` al build: `host/vite.js`; prod: los rewrites de `host/vercel.json`) + el `writeKey` que la app pasa en `startDelivery`.
+- **Meta**: snippet del pixel (`fbq`) en el HTML del host + la función `api/send-server-event.ts` (CAPI) con `META_PIXEL_ID` y `META_ACCESS_TOKEN` en las env del server — sin ellas la CAPI responde 500 y solo cuenta el pixel (degradación segura, sin dobles). `META_TEST_EVENT_CODE` solo para probar en Events Manager: vacío en producción. En dev, `host/vite.js` mockea el endpoint.
+- **Metadata del hosting**: la función `api/get-vercel-session-metadata.ts` (echo de los headers del edge con `supplier: "vercel"`; en dev la mockea `host/vite.js`). En otro hosting, se reimplementa el endpoint con su `supplier` y la suite no cambia.
+- **Presencia en vivo** (opcional): dependencia `firebase` + una instancia de RTDB, ver «Presencia en vivo».
 
 ## Recetas
 

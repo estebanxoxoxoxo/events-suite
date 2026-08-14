@@ -1,0 +1,3 @@
+# Los scripts de infra se pegan tal cual en CloudShell y corren en Linux: si el
+# working copy los toma con CRLF, bash falla con errores ilegibles ($'\r').
+*.sh text eol=lf

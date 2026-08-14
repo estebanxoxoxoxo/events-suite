@@ -1,0 +1,19 @@
+{
+  "name": "events-suite",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Analítica de comportamiento y de negocio para el navegador: detección (sources + FSMs) → gateway → delivery (pipeline propio estilo RudderStack + Meta pixel/CAPI). Se consume como submódulo de git, en TypeScript, sin build propio.",
+  "scripts": {
+    "publish:event-types": "node scripts/publish-event-types.mjs"
+  },
+  "peerDependencies": {
+    "@rudderstack/analytics-js": "^3",
+    "firebase": "^12",
+    "react": ">=18"
+  },
+  "peerDependenciesMeta": {
+    "@rudderstack/analytics-js": { "optional": true },
+    "firebase": { "optional": true }
+  }
+}

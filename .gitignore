@@ -1,0 +1,16 @@
+# La suite se consume como fuente (submódulo): no tiene build ni deps propias.
+node_modules
+dist
+
+# Secretos / entorno — NUNCA commitear
+.env
+.env.*
+*serviceAccount*.json
+*firebase-adminsdk*.json
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.log
