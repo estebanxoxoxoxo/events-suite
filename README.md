@@ -22,6 +22,10 @@ No tiene build ni dependencias propias: se consume como fuente TypeScript y el b
 
 ## Implementación en la app — paso a paso
 
+> Versión larga, con los comandos, los scripts de `package.json` y la
+> verificación: **[GETTING-STARTED.md](./GETTING-STARTED.md)**. Lo de acá abajo
+> es el resumen.
+
 **1. Instalar como submódulo** — la carpeta tiene que llamarse `events-suite` para que el espejo de abajo resuelva sin tocar nada:
 
 ```bash
@@ -139,7 +143,8 @@ EventsSuiteProvider.tsx · init.ts (auto-init) · IncomingEventReader.tsx · ind
 
 ── afuera del código de navegador ──
 host/          cableado del host: vite.js (dataplane dev + sourceConfig al build) ·
-               vercel.json (rewrites de prod) · sourceConfig.json (plantilla)
+               mirror-api.mjs (genera el api/ de la raíz) · vercel.json (rewrites
+               de prod) · sourceConfig.json (plantilla)
 api/           funciones serverless: get-vercel-session-metadata (geo/IP del edge) ·
                send-server-event (CAPI de Meta) · register · failed-lead · firebase-config
 infra/         el pipeline: Vector en EC2, capas raw/bronze en S3, ops por CloudShell
