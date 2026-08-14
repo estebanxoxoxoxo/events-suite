@@ -1,3 +1,5 @@
-# Los scripts de infra se pegan tal cual en CloudShell y corren en Linux: si el
-# working copy los toma con CRLF, bash falla con errores ilegibles ($'\r').
-*.sh text eol=lf
+# LF en todos lados. La suite se edita desde el host (donde vive como
+# submódulo) y desde acá: con finales mezclados, cualquier archivo tocado
+# aparece como reescrito entero. Y los scripts de infra se pegan tal cual en
+# CloudShell, donde bash falla con CRLF ($'\r').
+* text=auto eol=lf
