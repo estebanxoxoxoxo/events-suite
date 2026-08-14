@@ -6,7 +6,7 @@ para que enchufarla en un proyecto nuevo sea copiar líneas, no reinventarlas.
 
 ```
 vite.js             plugin: dataplane de dev/preview + sourceConfig al build + full-reload
-mirror-api.mjs      genera el api/ de la raíz del host — el espejo, del lado del servidor
+mirror-api.mjs      copia api/ a la raíz del host — el espejo, del lado del servidor
 sourceConfig.json   plantilla del sourceConfig del SDK (la writeKey entra por parámetro)
 vercel.json         los rewrites de producción, para copiar al vercel.json del host
 ```
@@ -41,37 +41,41 @@ del host, antes del catch-all del SPA.
 
 **Funciones — el espejo del servidor.** Vercel solo descubre funciones en el
 `api/` de la **raíz del proyecto**, y las de la suite viven en el submódulo: son
-invisibles para el deploy. El puente es el mismo espejo que del lado del
-cliente, pero generado:
+invisibles para el deploy. El puente es una copia exacta:
 
 ```bash
-node events-suite/host/mirror-api.mjs        # crea/actualiza ./api con un archivo por función
-node events-suite/host/mirror-api.mjs --check # no escribe: falla si el espejo quedó viejo
+node events-suite/host/mirror-api.mjs         # copia api/ de la suite a ./api
+node events-suite/host/mirror-api.mjs --check # no escribe; falla si difiere (CI)
 ```
 
-Conviene dejarlo como script del host y correr `--check` en CI:
+Conviene dejarlo como script del host:
 
 ```json
-"scripts": { "mirror:api": "node events-suite/host/mirror-api.mjs" }
+"scripts": {
+  "mirror:api": "node events-suite/host/mirror-api.mjs",
+  "mirror:api:check": "node events-suite/host/mirror-api.mjs --check"
+}
 ```
 
-Flags: `--only a,b` (espeja algunas), `--out dir`, `--force` (pisa un archivo
-propio del host con el mismo nombre). El script **no pisa** nada que no haya
-generado él, avisa cuando un espejo quedó huérfano (la suite ya no tiene esa
-función) y su salida es determinista, así que `--check` no da falsos positivos.
+Se **commitea** el `api/` copiado: Vercel lo necesita en el repo. La fuente
+sigue siendo la suite — el `api/` del host no se edita, se regenera, y eso es
+justo lo que verifica `--check`. Compara ignorando finales de línea, porque git
+los reescribe: un clon fresco en Windows deja CRLF donde la suite tiene LF, y
+si no, `--check` gritaría por una diferencia que no existe.
 
 **Copia y no re-exporta**, a propósito. Un `export { default } from
 '../events-suite/api/x'` sería más lindo, pero Vercel empaqueta cada fichero de
 `api/` por separado y los imports relativos a carpetas hermanas ya reventaron
 con `ERR_MODULE_NOT_FOUND` — está anotado en el encabezado de
 `send-server-event.ts`. Las funciones de la suite están escritas self-contained
-justamente para que copiarlas alcance: ninguna importa por path relativo. La
-fuente sigue siendo la suite; el espejo se regenera, no se edita.
+justamente para que copiarlas alcance: ninguna importa por path relativo.
 
-Si el host solo quiere la analítica y no el registro:
-`--only send-server-event,get-vercel-session-metadata`. Sin esas dos la suite
-degrada sin romper: la CAPI de Meta no cuenta (queda solo el pixel) y los
-eventos viajan sin geo/IP de sesión.
+Copia **las cinco**. Tres (`register`, `failed-lead`, `firebase-config`) son del
+registro con Google de Smarty: un host que no lo use las va a tener deployadas,
+pero inertes — sin `FIREBASE_SERVICE_ACCOUNT` en las env, el handler corta y
+devuelve 500 sin tocar nada. Sin las otras dos, la suite degrada sin romper: la
+CAPI de Meta no cuenta (queda solo el pixel) y los eventos viajan sin geo/IP de
+sesión.
 
 **Variables de entorno** — `META_PIXEL_ID` y `META_ACCESS_TOKEN` para la CAPI
 (`META_TEST_EVENT_CODE` solo para probar en Events Manager: vacío en prod).

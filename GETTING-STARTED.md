@@ -163,17 +163,21 @@ completa al editar la suite.
 ### 6.2 El espejo del servidor — `api/` en la raíz
 
 Vercel **solo descubre funciones en el `api/` de la raíz del proyecto**: las de
-la suite viven en el submódulo y son invisibles para el deploy. El generador es
-el puente:
+la suite viven en el submódulo y son invisibles para el deploy. El puente es una
+copia exacta:
 
 ```bash
-node events-suite/host/mirror-api.mjs        # crea/actualiza ./api
-node events-suite/host/mirror-api.mjs --check # falla si el espejo quedó viejo
+node events-suite/host/mirror-api.mjs         # copia api/ de la suite a ./api
+node events-suite/host/mirror-api.mjs --check # falla si difiere (para CI)
 ```
 
-Se **commitea** el `api/` generado (Vercel lo necesita en el repo). Si tu app no
-usa el registro con Google, espejá solo lo de analítica:
-`--only send-server-event,get-vercel-session-metadata`.
+Se **commitea** el `api/` copiado: Vercel lo necesita en el repo. Y no se edita
+—se regenera—, que es lo que verifica `--check`.
+
+Copia las cinco funciones. Tres son del registro con Google de Smarty
+(`register`, `failed-lead`, `firebase-config`): si tu app no lo usa, quedan
+deployadas pero inertes — sin `FIREBASE_SERVICE_ACCOUNT` en las env el handler
+corta y devuelve 500 sin tocar nada.
 
 Detalle: copia y no re-exporta porque Vercel empaqueta cada fichero de `api/`
 por separado y los imports relativos a carpetas hermanas revientan con
