@@ -27,8 +27,6 @@ const config = {
   databaseURL: "",
   idleTimeoutMs: 3000,
   idleFallbackMs: 1500,
-  /** Refresco de `last_seen`, para distinguir vivo de colgado. */
-  heartbeatMs: 30000,
 };
 
 type DatabaseApi = typeof import("firebase/database");
@@ -181,11 +179,15 @@ async function connect(cfg: typeof config, unsubs: (() => void)[]) {
       if (!api || !db || !nodePath) return;
       void api.update(api.ref(db, nodePath), ambientPatch()).catch(swallow);
     };
-    const beat = setInterval(patch, cfg.heartbeatMs);
-    unsubs.push(() => clearInterval(beat));
     // el anonymous_id y la geo llegan después del arranque: en cuanto caen,
-    // el nodo se completa sin esperar al próximo evento ni al heartbeat
+    // el nodo se completa sin esperar al próximo evento
     unsubs.push(sessionMetadata.subscribe(patch));
+    // `visible` es lo único que cambia sin que ocurra ningún evento, y cambia
+    // en un instante conocido: acá. Antes esto era un latido cada 30 s que
+    // reescribía el mismo nodo aunque no hubiera pasado nada — una escritura
+    // por pestaña abierta y por minuto, para mantener un solo campo.
+    document.addEventListener("visibilitychange", patch);
+    unsubs.push(() => document.removeEventListener("visibilitychange", patch));
 
     const queued = pending;
     pending = [];
