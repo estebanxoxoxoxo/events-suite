@@ -36,18 +36,29 @@ type RudderSdk = {
 
 /** El SDK es el dueño de estos dos ids; los publica en el registry para que
  * los use quien los necesite (presencia agrupa pestañas por anonymous_id).
- * Se relee en cada despacho: el session_id rota tras 30 min de inactividad. */
-function publishIdentity() {
-  if (!sdk) return;
+ * Se relee en cada despacho: el session_id rota tras 30 min de inactividad.
+ * Devuelve true cuando ya tiene los dos. */
+function publishIdentity(): boolean {
+  if (!sdk) return false;
   try {
     const sessionId = sdk.getSessionId();
-    setIdentityMetadata({
-      anonymous_id: sdk.getAnonymousId(),
-      session_id: sessionId === null || sessionId === undefined ? undefined : String(sessionId),
-    });
+    // `|| undefined`: en un visitante NUEVO el SDK devuelve "" hasta que
+    // termina de crearlos, y un vacío guardado pisa al valor bueno
+    const anonymous_id = sdk.getAnonymousId() || undefined;
+    const session_id = sessionId ? String(sessionId) : undefined;
+    setIdentityMetadata({ anonymous_id, session_id });
+    return Boolean(anonymous_id && session_id);
   } catch {
-    /* noop */
+    return false;
   }
+}
+
+/** El SDK crea el anonymousId y abre la sesión DURANTE la carga, no antes de
+ * que `load()` retorne: leerlos en el mismo tick devuelve vacío en cualquier
+ * visitante nuevo. Reintenta hasta tenerlos, con techo. */
+function publishIdentityWhenReady(tries = 20): void {
+  if (publishIdentity() || tries <= 0) return;
+  setTimeout(() => publishIdentityWhenReady(tries - 1), 500);
 }
 
 let started = false;
@@ -96,10 +107,13 @@ async function loadSdk(cfg: typeof config) {
       // GA4). Sin esto, un anonymous_id son N visitas pegadas en una sola.
       sessions: { autoTrack: true, timeout: 1800000 },
       sendAdblockPage: false,
+      // el momento exacto en que los ids existen; el reintento de abajo es la
+      // red por si el callback no llega (SDK bloqueado a mitad de carga)
+      onLoaded: () => publishIdentity(),
     });
     sdk = instance as unknown as RudderSdk;
     sdk.page(); // page() manual: un pageview por carga de la landing
-    publishIdentity(); // recién acá existen: los crea el SDK al cargar
+    publishIdentityWhenReady();
     identify(sessionMetadata.get().login); // por si el login llegó antes que el SDK
     const queued = pending;
     pending = [];

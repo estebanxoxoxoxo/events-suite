@@ -16,7 +16,10 @@ let identity: IdentityMetadata = {};
 /** Merge acumulativo e idempotente: solo emite si algo cambió — el pusher la
  * refresca en cada despacho y el session_id rota tras 30 min de inactividad. */
 export function setIdentityMetadata(data: Partial<IdentityMetadata>): void {
-  const next = { ...identity, ...data };
+  // un `undefined` no borra lo que ya había: el pusher reintenta hasta tener
+  // los dos ids y el primer intento suele traer solo uno
+  const defined = Object.fromEntries(Object.entries(data).filter(([, v]) => v !== undefined));
+  const next = { ...identity, ...defined };
   if (next.anonymous_id === identity.anonymous_id && next.session_id === identity.session_id) return;
   identity = next;
   emitter.emit(identity);
