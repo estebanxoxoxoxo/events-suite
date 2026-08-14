@@ -42,9 +42,7 @@ Dos detalles que importan:
 
 ---
 
-## 2. Instalar las dependencias del host
-
-Las instala el host, no el submódulo:
+## 2. Instalar las dependencias — en el host, no en el submódulo
 
 ```bash
 pnpm add react react-dom
@@ -53,8 +51,29 @@ pnpm add firebase                    # solo si vas a usar presencia en vivo
 pnpm add firebase-admin              # solo si espejás register / failed-lead
 ```
 
-Las dos del medio entran por **import dinámico**: si tu `startDelivery` no las
-enciende, no se descargan.
+**Por qué en el host y no adentro de la suite.** La suite se consume como
+**fuente**, no como paquete compilado: sus imports los resuelve el bundler del
+host, buscando `node_modules` hacia arriba desde el archivo que importa. Si la
+suite tuviera su propio `node_modules`, cada paquete terminaría **dos veces** en
+el bundle.
+
+Con `react` eso no es peso de más, es rotura: el `EventsSuiteProvider` crearía su
+contexto con la copia del submódulo y tu `useEventsSuite()` lo leería desde la de
+la raíz — dos objetos distintos, hook en null. Es la razón por la que toda
+librería de React declara `react` como *peer*. Con `firebase` y
+`@rudderstack/analytics-js` es menos brutal pero igual de indeseable: dos copias
+del SDK, y en rudder dos instancias del singleton peleando por la misma cola.
+
+`firebase-admin` ni siquiera tiene la opción: corre en las funciones de Vercel,
+que se construyen contra el `package.json` de la **raíz** del proyecto — el del
+submódulo no existe para ese build.
+
+Por eso el `package.json` de la suite las declara como `peerDependencies` (las
+tres últimas, opcionales) y **no instala nada**. Si en algún momento ves un
+`events-suite/node_modules/`, algo se instaló donde no va.
+
+Las dos del medio entran además por **import dinámico**: si tu `startDelivery` no
+las enciende, no se descargan.
 
 ---
 

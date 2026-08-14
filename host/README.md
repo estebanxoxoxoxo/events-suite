@@ -83,7 +83,9 @@ no lo instala.
 
 ## 4. Dependencias
 
-Las instala el host, no el submódulo:
+Las instala el host, no el submódulo — son **peer**: la suite se consume como
+fuente y una segunda copia de `react` rompe los hooks (el porqué completo, en
+[GETTING-STARTED §2](../GETTING-STARTED.md#2-instalar-las-dependencias--en-el-host-no-en-el-submódulo)).
 
 | Paquete | Para qué | Cuándo |
 |---|---|---|
