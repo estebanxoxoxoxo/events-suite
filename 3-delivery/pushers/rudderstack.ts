@@ -2,7 +2,8 @@
 // suscribe al gateway (con replay: los eventos previos al arranque salen
 // igual), adapta cada envelope y despacha por el SDK, que aporta cola, batch
 // y retry. Reglas no negociables del pipeline: batch obligatorio, sin beacon,
-// sin page() automático (se llama manual acá); dataplane y sourceConfig
+// sin page() del SDK (la carga la emite la suite como `page_view` por el
+// gateway, ver loadSdk); dataplane y sourceConfig
 // same-origin. El tracking de sesión del SDK SÍ va activo (ver load()).
 // El SDK se carga con import dinámico en idle para no pesar en el LCP (con
 // timeout: las animaciones continuas de la landing pueden postergar
@@ -112,12 +113,12 @@ async function loadSdk(cfg: typeof config) {
       onLoaded: () => publishIdentity(),
     });
     sdk = instance as unknown as RudderSdk;
-    // page() manual: un pageview por carga. Con el MISMO context que los
-    // track — sin esto viajaba sin geo, y es el evento más frecuente. Es
-    // best-effort: si la metadata del hosting todavía no llegó, va sin ella
-    // (la fetch arranca en startDelivery y el SDK carga en idle, así que
-    // normalmente llega antes).
-    sdk.page({}, { context: toRudderContext(sessionMetadata.get()) });
+    // SIN page(): la carga ya la emite la suite como `page_view` por el
+    // gateway, con el envelope de todos. La llamada `page` del SDK era el
+    // mismo hecho contado dos veces, con otro shape (type=page, event=null y
+    // properties propias del SDK) — una fila por carga que no se parecía a
+    // ninguna otra. Lo que aportaba no se pierde: el SDK sigue poniendo
+    // `context.page` (url, path, referrer, title) en TODOS los eventos.
     publishIdentityWhenReady();
     identify(sessionMetadata.get().login); // por si el login llegó antes que el SDK
     const queued = pending;

@@ -16,7 +16,7 @@ Al lado de esas dos capas vive `schemas/<v>/bronze_v1.schema`: el esquema public
 
 **Reglas no negociables del SDK** (el porqué está en el README):
 - Batch obligatorio: `queueOptions.batch.enabled: true`.
-- Sin beacon y sin `page()` automático — `page()` se llama manualmente. Ojo: eso NO aplica a `sessions.autoTrack`, que va **activo** (30 min de inactividad) y es quien pone `context.sessionId` en cada evento.
+- Sin beacon y **sin `page()` del SDK**: la carga la emite la suite como `page_view` por el gateway (`FSMs/pageView.ts`), con el mismo envelope que todo lo demás. La llamada `page` era el mismo hecho dos veces, con `type=page`, `event=null` y properties propias del SDK. No se pierde nada: `context.page` (url, path, referrer, title) sigue viajando en TODOS los eventos. Ojo: nada de esto aplica a `sessions.autoTrack`, que va **activo** (30 min de inactividad) y es quien pone `context.sessionId` en cada evento.
 - writeKey validado por header (base64) en el edge.
 
 **Capa plata (diseñada, no construida):** traits en `context.traits`, dedup por `event_id` (el de la suite, en `properties` — no el `message_id` de la raíz, que lo genera el SDK al despachar), particionado por fecha.
