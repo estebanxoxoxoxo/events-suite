@@ -16,7 +16,7 @@ import { scrollYData } from "../sources/scrollYData";
 import { BehaviorEventNames, type ComponentFocusConfig, type ScrollDirection } from "../../types";
 
 const config: ComponentFocusConfig = {
-  minSeconds: 6,
+  minSeconds: 4.5,
 };
 
 type Input = { component: string | null; at: number };
@@ -24,11 +24,19 @@ type Input = { component: string | null; at: number };
 type Focus = { component: string; since: number; enteredFrom: ScrollDirection | null };
 type Ctx = { focus: Focus | null };
 
+/** El LADO por el que el usuario llegó, que es el opuesto a su dirección de
+ * viaje: si venía bajando, entró desde arriba. Guardar la dirección cruda era
+ * engañoso — marcaba "down" en una llegada desde arriba.
+ * `exited_to` no se invierte: ahí "to" es hacia dónde va, o sea la dirección
+ * misma. "from" queda atrás, "to" queda adelante. */
+const sideOfArrival = (d: ScrollDirection | null): ScrollDirection | null =>
+  d === "down" ? "up" : d === "up" ? "down" : null;
+
 const arm = (component: string, at: number): Focus => ({
   component,
   since: at,
-  // dirección viva del scroll de llegada: disponible ya, sin esperar el gesto
-  enteredFrom: scrollYData.liveDirection(),
+  // dirección viva del scroll: disponible ya, sin esperar a que asiente el gesto
+  enteredFrom: sideOfArrival(scrollYData.liveDirection()),
 });
 
 export const startComponentFocus = (cfg: ComponentFocusConfig = config) =>

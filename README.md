@@ -183,9 +183,9 @@ Cada FSM vive en su archivo con su objeto `config` arriba de todo — **la fuent
 | `relevantSession.ts` | `relevant_session` | 1×/sesión | ≥40 s de atención **y** `reading_scroll` + `diagonal_scroll` sumando ≥5 (reglas `minEvents`, cuenta desde el gateway) |
 | `activeSession.ts` | `active_session` | 1×/sesión | ≥15 s de atención **y** ≥50 % depth |
 | `scrollDepth.ts` | `depth_scroll` | 1×/nivel | niveles `[25, 50, 75, 90]` |
-| `readingScroll.ts` | `reading_scroll` | 1×/ocasión | 3 gestos < 301 px en < 20 s |
+| `readingScroll.ts` | `reading_scroll` | 1×/ocasión | ≥3 gestos < 301 px **hacia abajo**, con < 3,5 s entre uno y otro (un tramo hacia arriba no suma y corta) |
 | `skimScroll.ts` | `skim_scroll` | 1×/ocasión | un gesto > 2500 px en cualquier dirección, salvo la barrida completa al tope |
-| `diagonalScroll.ts` | `diagonal_scroll` | 1×/ocasión | 2 gestos de 300–2501 px en < 20 s |
+| `diagonalScroll.ts` | `diagonal_scroll` | 1×/ocasión | ≥2 gestos de 300–2501 px, con < 3,5 s entre uno y otro |
 | `toTopScroll.ts` | `to_top_scroll` | 1×/ocasión | un gesto ↑ que sale de depth > 80 % y aterriza en < 20 % (sin umbral de px) |
 | `bounce.ts` | `bounce` | 1×/sesión | la sesión termina (pagehide) antes de 5 s **de atención** |
 | `click.ts` | `click` | 1×/sesión | al cierre de sesión emite el total y el mapa de coordenadas |
@@ -204,11 +204,13 @@ Un «gesto» es el neto de un scroll asentado tras 250 ms sin actividad: `{ delt
 <section data-analytics-id="problema">…</section>
 ```
 
-Dominancia relativa al viewport (IntersectionObserver, sin coordenadas); el valor del atributo viaja como `component`. No anidar etiquetas. Elementos que montan tarde entran solos (MutationObserver). Payload de `component_focus`:
+Domina el componente cuyo CENTRO (x, y) cae en la franja central de la pantalla — se descarta un 30% en cada borde. Nada de superficie: una sección más alta que la ventana nunca entra entera, pero su medio sí pasa por el centro. El valor del atributo viaja como `component`. No anidar etiquetas. Elementos que montan tarde entran solos (MutationObserver). Payload de `component_focus`:
 
 ```json
-{ "component": "problema", "dwell_seconds": 4.38, "entered_from": "down", "exited_to": "down" }
+{ "component": "problema", "dwell_seconds": 4.38, "entered_from": "up", "exited_to": "down" }
 ```
+
+`entered_from` es el **lado por el que llegó** (bajando se entra desde arriba: `"up"`); `exited_to` es **hacia dónde se fue** (bajando: `"down"`). Uno queda atrás, el otro adelante — por eso no son el mismo valor en un recorrido de corrido.
 
 ### Catálogo de payloads
 
@@ -225,7 +227,7 @@ skim_scroll       {"delta_px":5400,"direction":"down"}
 to_top_scroll     {"delta_px":8700,"from_depth":1,"to_depth":0.13}
 click             {"click":[0.0078,0.102]}
 rage_click        {"quantity":3,"span_ms":104,"x":0.0078,"y":0.102}
-component_focus   {"component":"problema","dwell_seconds":4.38,"entered_from":"down","exited_to":"up"}
+component_focus   {"component":"problema","dwell_seconds":4.38,"entered_from":"up","exited_to":"down"}
 ```
 
 **Unidades**, que es donde se cometen los errores de lectura:

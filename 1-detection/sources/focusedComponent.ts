@@ -35,8 +35,10 @@ let settle: ReturnType<typeof setTimeout> | null = null;
 let listening = false;
 let current: string | null = null;
 
-const labelOf = (el: Element) =>
-  el.getAttribute("data-analytics-id") || el.id || el.tagName.toLowerCase();
+/** null = no está etiquetado y no compite. Sin esto, un elemento sin atributo
+ * caía al nombre del tag y aparecía un componente fantasma llamado "section". */
+const labelOf = (el: Element): string | null =>
+  el.getAttribute("data-analytics-id")?.trim() || el.id || null;
 
 function recompute() {
   const vw = window.innerWidth;
@@ -72,10 +74,12 @@ function recompute() {
 }
 
 function discover() {
-  tracked.forEach(el => {
-    if (el.isConnected === false) tracked.delete(el);
+  // se REHACE, no se acumula: un elemento al que le sacaron la etiqueta —o que
+  // el framework reemplazó— tiene que salir de la lista, no quedar suelto
+  tracked.clear();
+  document.querySelectorAll(config.selectors.join(",")).forEach(el => {
+    if (labelOf(el)) tracked.add(el);
   });
-  document.querySelectorAll(config.selectors.join(",")).forEach(el => tracked.add(el));
   recompute();
 }
 

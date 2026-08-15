@@ -4,6 +4,11 @@
 // cortarse, con la cantidad real. Siete tramos leídos seguidos son un evento de
 // siete, no dos de tres.
 //
+// Solo cuenta lo que va HACIA ABAJO: leer es avanzar. Un tramo hacia arriba no
+// suma y además corta la racha, por la vía normal del gesto que no califica.
+// Por eso acá no hace falta descartar la barrida al tope como en las otras
+// FSMs: es un gesto de subida, ya queda afuera.
+//
 // Se corta de tres formas: llega un gesto que no califica, pasan maxGapSeconds
 // sin ninguno, o termina la sesión. Sin esas dos últimas, la racha final —la
 // del que leyó hasta el fondo y se fue— quedaría colgada para siempre.
@@ -11,7 +16,6 @@
 import { createFSM } from "./createFSM";
 import { gateway } from "../../2-gateway";
 import { scrollYData } from "../sources/scrollYData";
-import { isFullSweepToTop } from "../../lib/fullSweep";
 import { BehaviorEventNames, type ScrollGesture, type ScrollStreakConfig } from "../../types";
 
 const config: ScrollStreakConfig = {
@@ -24,7 +28,7 @@ type Input = { gesture: ScrollGesture } | { closed: true };
 type Ctx = { streak: number[]; startedAt: number; lastAt: number };
 
 const qualifies = (gesture: ScrollGesture, cfg: ScrollStreakConfig) =>
-  !isFullSweepToTop(gesture) && // la vuelta al tope no es lectura
+  gesture.direction === "down" && // subir no es leer: no suma y corta la racha
   gesture.deltaPx >= (cfg.minPx ?? 0) &&
   gesture.deltaPx <= (cfg.maxPx ?? Infinity);
 
