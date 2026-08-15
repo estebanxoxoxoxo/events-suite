@@ -64,10 +64,10 @@ export interface RageClickConfig {
   debounceMs: number;
 }
 
-/** Component focus: llegó por scroll, se quedó entre min y max segundos, y scrolleó a otra parte. */
+/** Component focus: llegó por scroll, se quedó al menos `minSeconds`, y
+ * scrolleó a otra parte. Sin techo. Cierra SOLO al perder el foco. */
 export interface ComponentFocusConfig {
   minSeconds: number;
-  maxSeconds: number;
 }
 
 // ── Runtime ──────────────────────────────────────────────────────────

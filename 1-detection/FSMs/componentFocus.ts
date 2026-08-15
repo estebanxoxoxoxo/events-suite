@@ -1,8 +1,13 @@
 // FSM «Component focus» — 1 vez por ocasión: el usuario llegó scrolleando a un
-// componente etiquetado, se quedó mirándolo entre minSeconds y maxSeconds, y
+// componente etiquetado, se quedó mirándolo al menos minSeconds, y
 // scrolleó a otra parte. La identidad del componente la resuelve el source
 // focusedComponent; acá vive solo el patrón temporal. El dominante inicial
 // (sin scroll previo) no cuenta: nadie "llegó" ahí.
+//
+// La ocasión se cierra SOLO al perder el foco: cuando otro componente pasa a
+// dominar, o cuando ninguno domina. Sin temporizador de quietud a propósito —
+// se probó y disparaba dos veces por la misma mirada. Consecuencia asumida: el
+// último componente mirado antes de irse no se emite.
 
 import { createFSM } from "./createFSM";
 import { gateway } from "../../2-gateway";
@@ -11,8 +16,7 @@ import { scrollYData } from "../sources/scrollYData";
 import { BehaviorEventNames, type ComponentFocusConfig, type ScrollDirection } from "../../types";
 
 const config: ComponentFocusConfig = {
-  minSeconds: 4,
-  maxSeconds: 20,
+  minSeconds: 6,
 };
 
 type Input = { component: string | null; at: number };
@@ -45,7 +49,10 @@ export const startComponentFocus = (cfg: ComponentFocusConfig = config) =>
       focused(input, ctx) {
         const focus = ctx.focus!;
         const dwell = (input.at - focus.since) / 1000;
-        if (dwell >= cfg.minSeconds && dwell <= cfg.maxSeconds) {
+        // sin techo: una mirada larga es la señal más fuerte que hay, no un error
+        const emitir = dwell >= cfg.minSeconds;
+
+        if (emitir) {
           const exitedTo = scrollYData.liveDirection();
           gateway.emit(BehaviorEventNames.ComponentFocus, {
             values: [
@@ -56,6 +63,7 @@ export const startComponentFocus = (cfg: ComponentFocusConfig = config) =>
             ],
           });
         }
+
         if (input.component) {
           ctx.focus = arm(input.component, input.at); // encadena al siguiente
           return;

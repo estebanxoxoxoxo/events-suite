@@ -43,8 +43,9 @@ export interface ClickData {
 export interface FocusedComponentSourceConfig {
   /** Qué elementos son "componentes" (p. ej. [data-analytics-id]). */
   selectors: string[];
-  /** 0..1: fracción mínima del viewport para que un componente sea dominante. */
-  minViewportShare: number;
+  /** 0..0.5: fracción de pantalla descartada en cada borde. Domina el
+   * componente cuyo CENTRO (x, y) cae en la franja que queda. */
+  band: number;
 }
 
 /** Cambio de componente dominante en el viewport (null = ninguno domina). */

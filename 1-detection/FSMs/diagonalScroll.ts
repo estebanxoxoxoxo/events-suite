@@ -14,7 +14,7 @@ import { BehaviorEventNames, type ScrollGesture, type ScrollStreakConfig } from 
 
 const config: ScrollStreakConfig = {
   minCount: 2,
-  maxGapSeconds: 20,
+  maxGapSeconds: 3.5,
   minPx: 301,
   maxPx: 2500,
 };
