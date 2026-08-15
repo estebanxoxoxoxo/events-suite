@@ -7,6 +7,7 @@ import { timeSession } from "./1-detection/sources/timeSession";
 import { scrollYData } from "./1-detection/sources/scrollYData";
 import { clicks } from "./1-detection/sources/clicks";
 import { focusedComponent } from "./1-detection/sources/focusedComponent";
+import { startPageView } from "./1-detection/FSMs/pageView";
 import { startRelevantSession } from "./1-detection/FSMs/relevantSession";
 import { startActiveSession } from "./1-detection/FSMs/activeSession";
 import { startScroll25 } from "./1-detection/FSMs/scroll25";
@@ -42,6 +43,7 @@ export function initEventsSuite(): () => void {
   focusedComponent.start();
 
   const fsms = [
+    startPageView(),
     startRelevantSession(),
     startActiveSession(),
     startScroll25(),

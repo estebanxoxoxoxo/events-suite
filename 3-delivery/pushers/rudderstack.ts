@@ -10,7 +10,7 @@
 
 import { registerDispatcher } from "../channel";
 import { sessionMetadata, setIdentityMetadata } from "../adapters/metadata";
-import { toRudderTrack } from "../adapters/rudderstack";
+import { toRudderContext, toRudderTrack } from "../adapters/rudderstack";
 import type { EventEnvelope, LoginMetadata } from "../../types";
 
 const config = {
@@ -23,7 +23,7 @@ const config = {
 
 type RudderSdk = {
   load: (writeKey: string, dataPlaneUrl: string, options?: Record<string, unknown>) => void;
-  page: () => void;
+  page: (properties?: Record<string, unknown>, options?: Record<string, unknown>) => void;
   track: (
     event: string,
     properties?: Record<string, unknown>,
@@ -112,7 +112,12 @@ async function loadSdk(cfg: typeof config) {
       onLoaded: () => publishIdentity(),
     });
     sdk = instance as unknown as RudderSdk;
-    sdk.page(); // page() manual: un pageview por carga de la landing
+    // page() manual: un pageview por carga. Con el MISMO context que los
+    // track — sin esto viajaba sin geo, y es el evento más frecuente. Es
+    // best-effort: si la metadata del hosting todavía no llegó, va sin ella
+    // (la fetch arranca en startDelivery y el SDK carga en idle, así que
+    // normalmente llega antes).
+    sdk.page({}, { context: toRudderContext(sessionMetadata.get()) });
     publishIdentityWhenReady();
     identify(sessionMetadata.get().login); // por si el login llegó antes que el SDK
     const queued = pending;

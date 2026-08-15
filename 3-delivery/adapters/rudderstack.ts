@@ -24,6 +24,37 @@ export interface RudderTrackCall {
   options: Record<string, unknown>;
 }
 
+/** PURA: el entorno que el SDK mergea dentro de `context`. Vive aparte porque
+ * no lo usa solo `track`: el `page()` del pusher tiene que mandar el MISMO
+ * bloque, y sin esto viajaba sin geo — y es el evento más numeroso de todos. */
+export function toRudderContext(
+  metadata: SessionMetadata,
+  loadedAt?: string,
+): Record<string, unknown> {
+  const hosting = metadata.metaDataFromHosting;
+  const location: Record<string, unknown> = {
+    ...(hosting.city ? { city: hosting.city } : {}),
+    ...(hosting.country ? { country: hosting.country } : {}),
+    ...(hosting.region ? { region: hosting.region } : {}),
+    ...(hosting.latitude ? { latitude: hosting.latitude } : {}),
+    ...(hosting.longitude ? { longitude: hosting.longitude } : {}),
+    ...(hosting.postal_code ? { postal_code: hosting.postal_code } : {}),
+  };
+
+  return {
+    // ancla de la carga de página: `timestamp - loaded_at` es el tiempo real
+    // transcurrido, y agrupa los eventos de una misma carga (sessionId no: una
+    // sesión de 30 min puede tener varias)
+    ...(loadedAt ? { loaded_at: loadedAt } : {}),
+    ...(hosting.ip ? { ip: hosting.ip } : {}),
+    ...(Object.keys(location).length > 0 ? { location } : {}),
+    // no hay campo estándar para "quién reportó esto"
+    ...(hosting.supplier ? { hosting: { supplier: hosting.supplier } } : {}),
+    // hosting.timezone se DESCARTA a propósito: el SDK ya pone el del
+    // navegador, que es el real; el del edge es una adivinanza desde la IP
+  };
+}
+
 export function toRudderTrack(envelope: EventEnvelope, metadata: SessionMetadata): RudderTrackCall {
   const raw = envelope.properties as Record<string, unknown> | undefined;
 
@@ -38,28 +69,7 @@ export function toRudderTrack(envelope: EventEnvelope, metadata: SessionMetadata
     flat = { ...(raw ?? {}) };
   }
 
-  const hosting = metadata.metaDataFromHosting;
-  const location: Record<string, unknown> = {
-    ...(hosting.city ? { city: hosting.city } : {}),
-    ...(hosting.country ? { country: hosting.country } : {}),
-    ...(hosting.region ? { region: hosting.region } : {}),
-    ...(hosting.latitude ? { latitude: hosting.latitude } : {}),
-    ...(hosting.longitude ? { longitude: hosting.longitude } : {}),
-    ...(hosting.postal_code ? { postal_code: hosting.postal_code } : {}),
-  };
-
-  const context: Record<string, unknown> = {
-    // ancla de la carga de página: `timestamp - loaded_at` es el tiempo real
-    // transcurrido, y agrupa los eventos de una misma carga (sessionId no: una
-    // sesión de 30 min puede tener varias)
-    loaded_at: envelope.context.loaded_at,
-    ...(hosting.ip ? { ip: hosting.ip } : {}),
-    ...(Object.keys(location).length > 0 ? { location } : {}),
-    // no hay campo estándar para "quién reportó esto"
-    ...(hosting.supplier ? { hosting: { supplier: hosting.supplier } } : {}),
-    // hosting.timezone se DESCARTA a propósito: el SDK ya pone el del
-    // navegador, que es el real; el del edge es una adivinanza desde la IP
-  };
+  const context = toRudderContext(metadata, envelope.context.loaded_at);
 
   return {
     event: envelope.name,

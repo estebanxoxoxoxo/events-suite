@@ -6,6 +6,7 @@ import type { GeneralInfo, ScrollDirection } from "./sources";
 // ── Comportamiento (FSMs) ────────────────────────────────────────────
 
 export enum BehaviorEventNames {
+  PageView = "page_view",
   RelevantSession = "relevant_session",
   ActiveSession = "active_session",
   Scroll25 = "scroll_25",
@@ -29,6 +30,9 @@ export enum BehaviorEventNames {
 export type Values<T> = { [K in keyof Required<T>]: Pick<Required<T>, K> }[keyof Required<T>][];
 
 export interface BehaviorEvents {
+  /** Sin payload: el hecho es el evento. Todo lo que describe una carga ya
+   * viaja en el sobre (page, loaded_at, referrer, campaign). */
+  [BehaviorEventNames.PageView]: undefined;
   [BehaviorEventNames.RelevantSession]: { values: Values<RelevantSessionValues> };
   [BehaviorEventNames.ActiveSession]: { values: Values<ActiveSessionValues> };
   /** El umbral está en el nombre del evento, así que el payload no lo repite:
@@ -115,7 +119,7 @@ interface ComponentFocusValues {
 // ── Negocio (app → gateway) ──────────────────────────────────────────
 
 export enum BusinessEventNames {
-  PageView = "page_view",
+  // page_view NO está acá: lo detecta la suite (FSMs/pageView.ts), no la app.
   CtaClick = "cta_click",
   SubscribeClick = "subscribe_click",
   RegisterButtonClick = "register_button_click",
@@ -140,7 +144,6 @@ export interface BusinessEventPayload {
 }
 
 export interface BusinessEvents {
-  [BusinessEventNames.PageView]: BusinessEventPayload;
   [BusinessEventNames.CtaClick]: BusinessEventPayload;
   [BusinessEventNames.SubscribeClick]: BusinessEventPayload;
   [BusinessEventNames.RegisterButtonClick]: BusinessEventPayload;

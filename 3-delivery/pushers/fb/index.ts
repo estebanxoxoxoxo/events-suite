@@ -11,14 +11,20 @@ import { toFbPush } from "../../adapters/fb";
 import type { FbEventMapping } from "../../adapters/fb";
 import { pushEvent } from "./pushEvent";
 import { FbEvent } from "./utils/types";
-import { BusinessEventNames } from "../../../types";
+import { BehaviorEventNames, BusinessEventNames } from "../../../types";
 
 const config = {
   /** false = doble pata: pixel + CAPI vía /api/send-server-event con el MISMO
    * eventID (Meta dedupa). Requiere META_PIXEL_ID y META_ACCESS_TOKEN en el
    * server; si faltan, la CAPI responde 500 y solo cuenta el pixel (sin dobles). */
   browserOnly: false,
+  /** Conversiones que van SOLO por el pixel, aunque `browserOnly` sea false:
+   * un PageView por CAPI es ruido — Meta ya lo tiene del navegador y no es una
+   * conversión. La doble pata se reserva para lo que sí vale. */
+  browserOnlyFor: [FbEvent.PageView] as FbEvent[],
   mapping: {
+    // page_view lo detecta la suite, no la app: es de comportamiento
+    [BehaviorEventNames.PageView]: FbEvent.PageView,
     [BusinessEventNames.SignUpCompleted]: FbEvent.CompleteRegistration,
     [BusinessEventNames.AddToCart]: FbEvent.AddToCart,
     [BusinessEventNames.CheckoutStarted]: FbEvent.InitiateCheckout,
@@ -38,7 +44,8 @@ export function startFbPusher(overrides: Partial<typeof config> = {}): () => voi
   const unsub = registerDispatcher(envelope => {
     const mapped = toFbPush(envelope, sessionMetadata.get(), cfg.mapping);
     if (!mapped) return;
-    pushEvent(mapped.event, { browserOnly: cfg.browserOnly, ...mapped.options });
+    const browserOnly = cfg.browserOnly || cfg.browserOnlyFor.includes(mapped.event);
+    pushEvent(mapped.event, { browserOnly, ...mapped.options });
   });
 
   return () => {
