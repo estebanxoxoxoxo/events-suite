@@ -1,8 +1,0 @@
-{
-  "//": "Rewrites que el HOST tiene que tener en su vercel.json para que la suite transmita en producción. No es un vercel.json ejecutable: es la referencia para copiar estas líneas al del host (el equivalente en dev lo resuelve host/vite.js). Ojo: el SDK pide /sourceConfig con y sin barra final.",
-  "rewrites": [
-    { "source": "/v1/batch", "destination": "https://actasitalianasexpress.com/v1/batch" },
-    { "source": "/sourceConfig", "destination": "/sourceConfig.json" },
-    { "source": "/sourceConfig/", "destination": "/sourceConfig.json" }
-  ]
-}

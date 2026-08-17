@@ -3,8 +3,19 @@
 // un MÍNIMO: la racha acumula mientras los gestos sigan calificando y emite una
 // sola vez al cortarse, con la cantidad real.
 //
-// Se corta con un gesto que no califica, con maxGapSeconds de silencio, o al
-// terminar la sesión.
+// Un gesto tiene TRES destinos, no dos: cuenta, es transparente, o corta.
+// Quedarse CORTO de la banda no contradice la diagonal en curso: es el que
+// micro-ajusta el centro de lo que está mirando, y eso pasa mientras barre. Ese
+// gesto es transparente — ni suma ni corta, esta FSM no lo ve. Pasarse de la
+// banda sí es otra intención (barrido largo, salto al tope) y ahí corta.
+//
+// Los tramos cortos no se pierden: son la banda de `reading_scroll`, que los
+// cuenta si van hacia abajo. Un micro-ajuste hacia arriba no es evento de nadie.
+// Las dos FSMs corren en paralelo sobre el mismo source: el usuario puede estar
+// centrando con tramos cortos mientras la diagonal sigue agregando.
+//
+// Se corta con un gesto que se pasa de la banda, con maxGapSeconds de silencio,
+// o al terminar la sesión.
 
 import { createFSM } from "./createFSM";
 import { gateway } from "../../2-gateway";
@@ -14,7 +25,7 @@ import { BehaviorEventNames, type ScrollGesture, type ScrollStreakConfig } from 
 
 const config: ScrollStreakConfig = {
   minCount: 2,
-  maxGapSeconds: 3.5,
+  maxGapSeconds: 7,
   minPx: 301,
   maxPx: 2500,
 };
@@ -22,10 +33,16 @@ const config: ScrollStreakConfig = {
 type Input = { gesture: ScrollGesture } | { closed: true };
 type Ctx = { streak: number[]; startedAt: number; lastAt: number };
 
-const qualifies = (gesture: ScrollGesture, cfg: ScrollStreakConfig) =>
-  !isFullSweepToTop(gesture) && // volver al tope no es barrer contenido
-  gesture.deltaPx >= (cfg.minPx ?? 0) &&
-  gesture.deltaPx <= (cfg.maxPx ?? Infinity);
+/** `ignored` es la diferencia con las otras rachas: el gesto no entra pero
+ * tampoco cierra. En cualquier dirección — el micro-ajuste sube y baja. */
+type Verdict = "counts" | "ignored" | "breaks";
+
+const judge = (gesture: ScrollGesture, cfg: ScrollStreakConfig): Verdict => {
+  if (isFullSweepToTop(gesture)) return "breaks"; // volver al tope no es barrer contenido
+  if (gesture.deltaPx < (cfg.minPx ?? 0)) return "ignored";
+  if (gesture.deltaPx > (cfg.maxPx ?? Infinity)) return "breaks";
+  return "counts";
+};
 
 export const startDiagonalScroll = (cfg: ScrollStreakConfig = config) =>
   createFSM<Input, Ctx>({
@@ -51,7 +68,11 @@ export const startDiagonalScroll = (cfg: ScrollStreakConfig = config) =>
           close();
           return;
         }
-        if (!qualifies(input.gesture, cfg)) {
+        // los tres destinos, explícitos. El wire ya filtra los transparentes,
+        // pero la FSM tiene que ser correcta sin depender de quién la alimenta.
+        const verdict = judge(input.gesture, cfg);
+        if (verdict === "ignored") return;
+        if (verdict === "breaks") {
           close();
           return;
         }
@@ -66,6 +87,10 @@ export const startDiagonalScroll = (cfg: ScrollStreakConfig = config) =>
       window.addEventListener("pagehide", onEnd);
       return [
         scrollYData.subscribe(gesture => {
+          // el transparente tampoco reinicia el hueco: así `maxGapSeconds` sigue
+          // midiendo lo que dice —el tiempo entre dos gestos DIAGONALES— y una
+          // racha no se estira sola a fuerza de micro-ajustes.
+          if (judge(gesture, cfg) === "ignored") return;
           send({ gesture });
           if (timer) clearTimeout(timer);
           timer = setTimeout(onEnd, cfg.maxGapSeconds * 1000);

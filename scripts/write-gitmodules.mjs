@@ -8,24 +8,28 @@
 // Es idempotente y conserva los otros submódulos del host: reescribe SOLO el
 // bloque de esta suite.
 //
-//   node scripts/write-gitmodules.mjs                 # URL por defecto
-//   node scripts/write-gitmodules.mjs <url>           # o la que le pases
-//   SUITE_URL=<url> node scripts/write-gitmodules.mjs
+//   node scripts/write-gitmodules.mjs                    # URL y rama por defecto
+//   node scripts/write-gitmodules.mjs <url> [rama]       # o las que le pases
+//   SUITE_URL=<url> SUITE_BRANCH=<rama> node scripts/write-gitmodules.mjs
 
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const DEFAULT_URL = "https://github.com/estebanxoxoxoxo/events-suite.git";
+/** Solo lo usa `git submodule update --remote`: el submódulo sigue apuntando a
+ * un commit fijo, no a la rama. Está para que actualizar sea un comando. */
+const DEFAULT_BRANCH = "main";
 
 const suiteDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const hostRoot = dirname(suiteDir);
 // el nombre del submódulo es la carpeta donde el host lo montó, no un fijo
 const name = basename(suiteDir);
 const url = process.argv[2] || process.env.SUITE_URL || DEFAULT_URL;
+const branch = process.argv[3] || process.env.SUITE_BRANCH || DEFAULT_BRANCH;
 
 const target = join(hostRoot, ".gitmodules");
-const block = `[submodule "${name}"]\n\tpath = ${name}\n\turl = ${url}\n`;
+const block = `[submodule "${name}"]\n\tpath = ${name}\n\turl = ${url}\n\tbranch = ${branch}\n`;
 
 /** Los bloques de los OTROS submódulos, tal cual estaban. */
 const otherBlocks = (contents) =>
@@ -45,5 +49,5 @@ if (previous === next) {
   writeFileSync(target, next, "utf8");
   console.log(`${previous ? "ACTUALIZADO" : "CREADO"}  ${target}`);
 }
-console.log(`  [submodule "${name}"] path=${name} url=${url}`);
+console.log(`  [submodule "${name}"] path=${name} url=${url} branch=${branch}`);
 console.log("Recordá: el .gitmodules se commitea en el repo del HOST, no acá.");

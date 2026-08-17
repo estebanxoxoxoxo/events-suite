@@ -16,8 +16,9 @@
 //   siempre      recarga la página entera al editar la suite: sus singletons
 //                (sources, gateway, FSMs) no sobreviven un hot-swap parcial.
 //
-// Producción (Vercel u otro): además hacen falta los rewrites de
-// `host/vercel.json` y las funciones de `api/` — ver `host/README.md`.
+// Producción (Vercel u otro): esto no alcanza. Hacen falta los rewrites en el
+// vercel.json DEL HOST y las funciones de `api/` copiadas a su raíz — pasos 7 y
+// 2 de GETTING-STARTED.md.
 
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
