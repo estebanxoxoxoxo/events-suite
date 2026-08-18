@@ -13,7 +13,7 @@ Eventos de comportamiento andando. La metadata que viaja no está revisada al 10
 1. La suite como submódulo en la raíz del host.
 2. `npm run prepare` adentro de la suite: copia el espejo y `api/`, escribe el `.gitmodules`, instala las peer en el host.
 3. Montar `EventsSuiteProvider` en el árbol de la app, con el `reader` apagado en producción.
-4. Llamar `startDelivery` una vez, con el writeKey. Hasta que no se llama, la suite mide y no transmite.
+4. Llamar `startDelivery` una vez. Hasta que no se llama, la suite mide y no transmite.
 5. En el `vercel.json` del host, el endpoint del ingestor va en el `destination` del rewrite de `/v1/batch`. Los secretos de Firebase y de Meta, en el hosting.
 
 Paso a paso: [GETTING-STARTED.md](./GETTING-STARTED.md)

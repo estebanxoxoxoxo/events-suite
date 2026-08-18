@@ -24,16 +24,18 @@ Van en `src/config.js` (o donde el host tenga su config). Las dos son **pública
 
 ```js
 // src/config.js
-// El writeKey del pipeline lo inventás vos: cualquier string opaco. El pipeline
-// es propio, no lo emite nadie. Tiene que ser el mismo en tres lugares: acá, en
-// el plugin de Vite (paso 4) y en lo que valide el edge del ingestor.
-export const ANALYTICS_WRITE_KEY = '<TU_WRITE_KEY>';
+// La pide el SDK como argumento de load(): sin ella el pusher no arranca y la
+// suite mide sin transmitir. No es un secreto ni te la emite nadie — viaja en
+// el bundle. Poné el nombre de tu app y seguí.
+export const ANALYTICS_WRITE_KEY = 'mi-app';
 
 // El databaseURL sale de la consola de Firebase → Realtime Database.
 export const ACTIVE_SESSIONS_DB = 'https://<TU-PROYECTO>-default-rtdb.firebaseio.com';
 ```
 
-El writeKey vive acá y nunca en la suite. Los pasos 4 y 6 lo importan de este archivo.
+El writeKey vive acá y nunca en la suite: los pasos 4 y 6 lo importan de este
+archivo, así que lo único que tiene que cumplir es coincidir consigo mismo. No
+hay nada que pedir ni que dar de alta.
 
 ## 4. `vite.config.js`
 
