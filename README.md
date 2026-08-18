@@ -1,6 +1,6 @@
 # events-suite
 
-Recoleccion de eventos semanticos de comportamiento y de negocio para webs y dispatch a ingestor propios y otros clientes. 
+Recoleccion de eventos semanticos de comportamiento y de negocio para webs y dispatch a ingestor propio y otros clientes. 
 
 Se monta como submódulo de git, se corre el script prepare de la suite y se monta en la web el provider de la suite
 
@@ -16,7 +16,7 @@ Eventos de comportamiento andando. La metadata que viaja no está revisada al 10
 4. Llamar `startDelivery` una vez. Hasta que no se llama, la suite mide y no transmite.
 5. En el `vercel.json` del host, el endpoint del ingestor va en el `destination` del rewrite de `/v1/batch`. Los secretos de Firebase y de Meta, en el hosting.
 
-Paso a paso: [GETTING-STARTED.md](./GETTING-STARTED.md)
+Paso a paso: [GETTING-STARTED.md](./GETTING-STARTED.md) (LECTURA OBLIGADA)
 
 ## Pipeline
 

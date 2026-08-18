@@ -134,6 +134,9 @@ const suite = useEventsSuite();
 suite.pushBusinessEvent(BusinessEventNames.SubscribeClick, { metadata: { source } });
 ```
 
+## 10. Pushear event types al bucket
+Lo consume el monitor
+
 ## Verificación
 
 - El visor del `reader` lista eventos al scrollear.
