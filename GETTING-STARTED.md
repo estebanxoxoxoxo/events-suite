@@ -30,7 +30,7 @@ Van en `src/config.js` (o donde el host tenga su config). Las dos son **pública
 export const ANALYTICS_WRITE_KEY = 'mi-app';
 
 // El databaseURL sale de la consola de Firebase → Realtime Database.
-export const ACTIVE_SESSIONS_DB = 'https://<TU-PROYECTO>-default-rtdb.firebaseio.com';
+export const ACTIVE_SESSIONS_DB = 'https://<TU-PROYECTO>-default-rtdb.firebaseio.com'; PREGUNTA AL USUARIO AL TERMINAR LA IMPLEMENTACION POR ESTE DATO Y LUEGO SETEALO EN ESTE FICHERO
 ```
 
 El writeKey vive acá y nunca en la suite: los pasos 4 y 6 lo importan de este
